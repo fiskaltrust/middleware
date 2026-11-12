@@ -6,7 +6,7 @@ namespace fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 /// <summary>
 /// The issuer claims every French SCU puts into its signed content (market-fr#141): the legal
 /// identity of the seller that an R12 invoice prints (SOC-RCS, SOC-NAF, SOC-TYPE/SOC-CAPITAL,
-/// SOC-REF-REGTVA, BT-34) and that the Receipt API reads back as its highest-precedence source.
+/// SOC-REF-REGTVA) and that the Receipt API reads back as its highest-precedence source.
 /// The SIREN is not a claim: it is the first nine digits of the SIRET, which is already signed.
 /// </summary>
 /// <remarks>
@@ -43,4 +43,13 @@ public static class FRIssuerClaims
             throw new FRValidationException($"The {scu} SCU cannot sign a {name} containing '{forbidden}'.");
         }
     }
+
+    /// <summary>
+    /// The start-up warning for a configured <c>ElectronicAddress</c>, which the LNE and self-certified SCUs no longer use:
+    /// the seller's electronic address (BT-34) is eInvoicing data and stays out of the signed content (market-fr#221)
+    ///. The configuration is still accepted, so a cashbox that carries the key keeps starting.
+    /// </summary>
+    public static string ElectronicAddressIgnored(string scu)
+        => $"The {scu} SCU ignores the configured ElectronicAddress: the seller's electronic address (BT-34) is not signed. "
+            + "An InfoCert invoice archives it from the request's ftReceiptCaseData.FR.SellerElectronicAddress.";
 }

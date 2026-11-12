@@ -65,4 +65,25 @@ public class FRPeriodTotals
 
     /// <summary>The grand total since the queue was opened; reported on every closing.</summary>
     public FRTotals Perpetual { get; set; } = new();
+
+    /// <summary>
+    /// Every period the receipt closes, shortest first, its own (<see cref="Period"/>) last: a monthly closing
+    /// reports the day and the month, a yearly closing and the queue stop the day, the month and the year, as v1.2
+    /// (market-fr#221). Each is printed and signed. Empty when the receipt reports <see cref="Period"/> only (a
+    /// shift or daily closing as sent before, an archive receipt).
+    /// </summary>
+    public List<FRPeriodTotal> Closed { get; set; } = new();
+
+    /// <summary>The periods to print and sign, shortest first: <see cref="Closed"/>, else <see cref="Period"/> alone.</summary>
+    public IReadOnlyList<FRPeriodTotal> Reported()
+        => Closed.Count > 0 ? Closed : new[] { new FRPeriodTotal { Period = Period, Totals = Current } };
+}
+
+/// <summary>The totals of one closed period since its previous closing.</summary>
+/// <remarks>Temporary local declaration, see <see cref="IFRSSCD"/>.</remarks>
+public class FRPeriodTotal
+{
+    public FRTotalsPeriod Period { get; set; }
+
+    public FRTotals Totals { get; set; } = new();
 }

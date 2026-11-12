@@ -72,12 +72,16 @@ public class FRPeriodTotalsAccumulator
 
     private const string BillTotalsPrefix = "B";
 
-    /// <summary>The totals a closing of <paramref name="period"/> reports, plus the perpetual total.</summary>
-    public FRPeriodTotals Snapshot(FRTotalsPeriod period) => new()
+    /// <summary>
+    /// The totals a closing of <paramref name="period"/> reports, plus the perpetual total, and the totals of every period in
+    /// <paramref name="closed"/>, shortest first (market-fr#221: a closing prints and signs every period it closes, as v1.2).
+    /// </summary>
+    public FRPeriodTotals Snapshot(FRTotalsPeriod period, IEnumerable<FRTotalsPeriod>? closed = null) => new()
     {
         Period = period,
         Current = period == FRTotalsPeriod.Perpetual ? Perpetual() : _queueFR.GetTotals(FRQueueFRColumns.TotalsPrefix(period)),
         Perpetual = Perpetual(),
+        Closed = (closed ?? []).OrderBy(x => x).Select(x => new FRPeriodTotal { Period = x, Totals = _queueFR.GetTotals(FRQueueFRColumns.TotalsPrefix(x)) }).ToList(),
     };
 
     /// <summary>Closes a period. The perpetual total is never reset.</summary>
@@ -153,7 +157,8 @@ public class FRPeriodTotalsAccumulator
 
     /// <summary>
     /// The period whose totals a closing receipt prints, training or not. As in v1.2, a training
-    /// closing prints the live figures of the real period without closing it (market-fr#221).
+    /// closing prints the live figures of the real period without closing it (market-fr#221). The queue stop
+    /// (0x4002) reports the year it closes, with the day and the month (<see cref="PeriodsReportedBy"/>).
     /// </summary>
     public static FRTotalsPeriod? ReportedPeriodOf(ReceiptRequest request) => request.ftReceiptCase.Case() switch
     {
@@ -161,8 +166,23 @@ public class FRPeriodTotalsAccumulator
         ReceiptCase.DailyClosing0x2011 => FRTotalsPeriod.Day,
         ReceiptCase.MonthlyClosing0x2012 => FRTotalsPeriod.Month,
         ReceiptCase.YearlyClosing0x2013 => FRTotalsPeriod.Year,
+        ReceiptCase.OutOfOperationReceipt0x4002 => FRTotalsPeriod.Year,
         FRReceiptChainExt.ArchiveReceipt => FRTotalsPeriod.Archive,
         _ => null,
+    };
+
+    /// <summary>
+    /// The periods a closing (0x2010-0x2013) or the queue stop (0x4002) prints and signs, training or not: every period
+    /// it closes, its own last (<see cref="PeriodsClosedBy"/>; decided 2026-11-12, as v1.2). Empty for every other
+    /// receipt, an archive receipt included, which reports its archive period alone.
+    /// </summary>
+    public static IReadOnlyList<FRTotalsPeriod> PeriodsReportedBy(ReceiptRequest request) => request.ftReceiptCase.Case() switch
+    {
+        ReceiptCase.ShiftClosing0x2010 => [FRTotalsPeriod.Shift],
+        ReceiptCase.DailyClosing0x2011 => [FRTotalsPeriod.Day],
+        ReceiptCase.MonthlyClosing0x2012 => [FRTotalsPeriod.Day, FRTotalsPeriod.Month],
+        ReceiptCase.YearlyClosing0x2013 or ReceiptCase.OutOfOperationReceipt0x4002 => [FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year],
+        _ => [],
     };
 
     /// <summary>The ticket and invoice totals are never reset, so together they are the perpetual total.</summary>

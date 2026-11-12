@@ -1,9 +1,11 @@
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Xunit;
@@ -14,7 +16,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 /// Every receipt of the closing chains S, Z, M, Y and of the technical chain E stores which period it closes
 /// (contract §1.3: <c>ClosingType</c>, <c>PeriodStart</c>, <c>PeriodEnd</c>) in <c>ftStateData.FR.Closing</c>.
 /// A period starts where the previous closing of that period ended, or at the queue's start; it ends on the
-/// closing receipt. None of it is signed.
+/// closing receipt. <c>Periods</c> lists every period the receipt closes with its start, which the LNE and
+/// self-certified SCUs sign in data-set field 20 (archive-v2 §5).
 /// </summary>
 public class ClosingPeriodTests
 {
@@ -101,7 +104,47 @@ public class ClosingPeriodTests
         JsonSerializer.Serialize(_sscd.Calls.Last().periodTotals).Should().NotContain("PeriodStart");
     }
 
-    private static DateTime At(int day, int hour, int minute = 0) => new(2026, 11, day, hour, minute, 0, DateTimeKind.Utc);
+    [Fact]
+    public async Task AMonthlyClosing_ListsTheDayAndTheMonth_WithTheirStarts()
+    {
+        await SignAsync(ReceiptCase.DailyClosing0x2011, At(1, 22));
+
+        var monthly = await SignAsync(ReceiptCase.MonthlyClosing0x2012, At(30, 22));
+
+        FRStateData.ClosedPeriods(monthly).Select(x => (x.Period, x.Start)).Should().Equal(
+            (FRTotalsPeriod.Day, At(1, 22)), (FRTotalsPeriod.Month, QueueStart));
+    }
+
+    [Fact]
+    public async Task TheQueueStop_ListsTheDayTheMonthAndTheYear()
+    {
+        await SignAsync(ReceiptCase.YearlyClosing0x2013, At(2, 12));
+
+        var stop = await SignAsync(ReceiptCase.OutOfOperationReceipt0x4002, At(5, 12));
+
+        FRStateData.ClosedPeriods(stop).Select(x => (x.Period, x.Start)).Should().Equal(
+            (FRTotalsPeriod.Day, At(2, 12)), (FRTotalsPeriod.Month, At(2, 12)), (FRTotalsPeriod.Year, At(2, 12)));
+        FRSignedRecords.Field20(Request(ReceiptCase.OutOfOperationReceipt0x4002), stop).Should().Be(
+            $"Day,{FRSignedRecords.Moment(At(2, 12))};Month,{FRSignedRecords.Moment(At(2, 12))};Year,{FRSignedRecords.Moment(At(2, 12))}");
+    }
+
+    [Theory]
+    [InlineData(ReceiptCase.ShiftClosing0x2010, FRTotalsPeriod.Shift)]
+    [InlineData(ReceiptCase.DailyClosing0x2011, FRTotalsPeriod.Day)]
+    public async Task AShiftOrDailyClosing_ListsOnlyItsOwnPeriod(ReceiptCase receiptCase, FRTotalsPeriod period)
+        => FRStateData.ClosedPeriods(await SignAsync(receiptCase, At(3, 12))).Select(x => (x.Period, x.Start)).Should().Equal((period, QueueStart));
+
+    [Fact]
+    public async Task AZeroReceiptOrATrainingClosing_ListsNoPeriod()
+    {
+        FRStateData.ClosedPeriods(await SignAsync(ReceiptCase.ZeroReceipt0x2000, At(1, 12))).Should().BeEmpty();
+        FRStateData.ClosedPeriods(await SignAsync(ReceiptCase.DailyClosing0x2011, At(1, 22), training: true)).Should().BeEmpty();
+    }
+
+    private static ReceiptRequest Request(ReceiptCase receiptCase) => new() { ftReceiptCase = receiptCase.WithCountry("FR") };
+
+    private static DateTime At(
+int day, int hour, int minute = 0) => new(2026, 11, day, hour, minute, 0, DateTimeKind.Utc);
 
     private async Task<ReceiptResponse> SignAsync(ReceiptCase receiptCase, DateTime moment, bool training = false, DateTime? queueStart = default)
     {

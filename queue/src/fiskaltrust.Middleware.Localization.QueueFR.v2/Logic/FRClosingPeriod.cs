@@ -18,8 +18,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 /// <para>
 /// The period starts where its totals were last reset: the previous closing of that period, including one that ended it
 /// by cascade (a monthly closing also ends the day), else the queue's start, else the receipt itself. It ends on the
-/// receipt's own moment. Nothing here is signed: signing the period start would change the LNE data set frozen on
-/// 2026-11-10, and that decision is open.
+/// receipt's own moment. <c>Periods</c> lists every period the receipt closes with its start; the LNE and self-certified
+/// SCUs sign them in data-set field 20 on the closings and the queue stop (archive-v2 §5, market-fr#221).
 /// </para>
 /// </remarks>
 public static class FRClosingPeriod
@@ -41,6 +41,11 @@ public static class FRClosingPeriod
             ClosingType = type,
             PeriodStart = period is { } closed ? totals.LastClosed(closed) ?? queueStart ?? response.ftReceiptMoment : null,
             PeriodEnd = period is null ? null : response.ftReceiptMoment,
+            Periods = period is null ? null : FRPeriodTotalsAccumulator.PeriodsClosedBy(request)
+                .Where(x => x != FRTotalsPeriod.Archive)
+                .OrderBy(x => x)
+                .Select(x => new FRStateClosedPeriod { Period = x.ToString(), Start = totals.LastClosed(x) ?? queueStart ?? response.ftReceiptMoment })
+                .ToList(),
         };
         response.ftStateData = stateData;
     }

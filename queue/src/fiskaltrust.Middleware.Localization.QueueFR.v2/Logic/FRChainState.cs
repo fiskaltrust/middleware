@@ -310,7 +310,23 @@ public class FRChainStateProvider
             ahead.Reverse();
             foreach (var entry in ahead)
             {
-                foreach (var file in FRChainRepair.Apply(_queueFR, entry))
+                var integrityDefects = actionJournals is null ? null : new List<ftActionJournal>();
+                List<FROpenArchiveFile.ForcedFile> files;
+                try
+                {
+                    files = FRChainRepair.Apply(_queueFR, entry, integrityDefects);
+                }
+                catch
+                {
+                    // The entry cannot be rolled over: drop what was applied so far, and reconcile again next time.
+                    _queueFR = null;
+                    throw;
+                }
+                foreach (var defect in integrityDefects ?? [])
+                {
+                    await actionJournals!.InsertAsync(defect).ConfigureAwait(false);
+                }
+                foreach (var file in files)
                 {
                     await RecordForcedArchiveAsync(entry, file, actionJournals).ConfigureAwait(false);
                 }

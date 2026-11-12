@@ -70,7 +70,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             row["Naf"].Should().Be("62.01Z");
             row["LegalForm"].Should().Be("SAS, au capital de 500000 EUR");
             row["VatOption"].Should().Be("debits");
-            row["ElectronicAddress"].Should().Be("123456789");
+            row["ElectronicAddress"].Should().BeEmpty("field 6 is no longer archived: BT-34 is not signed (market-fr#221)");
         }
 
         [Fact]
@@ -86,7 +86,42 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             row["Naf"].Should().Be("47.11F");
             row["LegalForm"].Should().Be("SARL");
             row["VatOption"].Should().Be("receipts");
-            row["ElectronicAddress"].Should().BeEmpty("not configured, so not signed");
+            row["ElectronicAddress"].Should().BeEmpty("a ticket, and nothing sent");
+        }
+
+        private static string InfoCertSignature(string claims)
+            => "eyJhbGciOiJFUzI1NiJ9." + Convert.ToBase64String(Encoding.UTF8.GetBytes(claims)).TrimEnd('=').Replace('+', '-').Replace('/', '_') + ".sig";
+
+        private const string InfoCertClaims = "{\"siret\":\"12345678901234\",\"csn\":\"SERIAL-1\",\"chainCounter\":1,\"previousSignatureCarriedOver\":\"N\",\"previousSignature\":\"\"}";
+
+        private const string SellerAddress = ",\"ftReceiptCaseData\":{\"FR\":{\"SellerElectronicAddress\":\"123456789_POS\",\"SellerElectronicAddressSchemeID\":\"0225\"}}";
+
+        [Fact]
+        public async Task TheSellerAddress_IsArchivedAsSentOnAnInfoCertInvoice()
+        {
+            var entry = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, ArchiveV2FilesTests.Request(0x4652_2000_0000_1002, SellerAddress),
+                ArchiveV2FilesTests.Response("ft1#I1", InfoCertSignature(InfoCertClaims)))!;
+
+            (await Rows(Journal(0x003), entry))[0]["ElectronicAddress"].Should().Be("123456789_POS", "BT-34, unsigned, as R12 lists it (market-fr#221)");
+        }
+
+        [Fact]
+        public async Task TheSellerAddress_IsNotArchivedOnAnLneInvoice()
+        {
+            var id = Guid.NewGuid();
+            var dataSet = $"12345678901234|||||123456789|{QueueId}|{id}||cashbox-fr|ft1#I1|2026-03-01T10:00:01.4560000Z|4652200000001002||1|EUR|4.40|||||SERIAL-1|1|N|";
+            var entry = ArchiveEntry.Read(id, QueueId, 1, ArchiveV2FilesTests.Request(0x4652_2000_0000_1002, SellerAddress), ArchiveV2FilesTests.Response("ft1#I1", dataSet + ".sig"))!;
+
+            (await Rows(Journal(0x003), entry))[0]["ElectronicAddress"].Should().BeEmpty("neither the case data nor a field 6 signed before market-fr#221 dropped BT-34 is archived outside InfoCert");
+        }
+
+        [Fact]
+        public async Task TheSellerAddress_IsNotArchivedOnAnInfoCertTicket()
+        {
+            var entry = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, ArchiveV2FilesTests.Request(0x4652_2000_0000_0001, SellerAddress),
+                ArchiveV2FilesTests.Response("ft1#T1", InfoCertSignature(InfoCertClaims)))!;
+
+            (await Rows(Journal(0x001), entry))[0]["ElectronicAddress"].Should().BeEmpty("invoices only");
         }
 
         // §1.2 sales columns.
@@ -153,7 +188,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             var customer = ",\"cbCustomer\":{\"CustomerName\":\"Client SARL\",\"CustomerId\":\"C-42\",\"CustomerStreet\":\"1 rue de la Paix\",\"CustomerZip\":\"75002\",\"CustomerCity\":\"Paris\"," +
                 "\"CustomerCountrySubentity\":\"IDF\",\"CustomerCountry\":\"FR\",\"CustomerVATId\":\"FR40123456789\",\"CustomerTaxId\":\"123456789\",\"CustomerReference\":\"PO-9\"}";
             var entry = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, ArchiveV2FilesTests.Request(0x4652_2000_0000_1002, customer),
-                ArchiveV2FilesTests.Response("ft1#I1", "i1", stateData: "{\"FR\":{\"CustomerEndpointId\":\"0225:123456789\"}}"))!;
+                ArchiveV2FilesTests.Response("ft1#I1", "i1"))!;
 
             var row = (await Rows(Journal(0x003), entry))[0];
 
@@ -166,7 +201,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             row["CustomerCountry"].Should().Be("FR");
             row["CustomerVATId"].Should().Be("FR40123456789");
             row["CustomerTaxId"].Should().Be("123456789");
-            row["CustomerEndpointId"].Should().Be("0225:123456789", "inferred by the queue when it signed");
+            row["CustomerEndpointId"].Should().BeEmpty("never inferred from the SIREN (market-fr#221)");
             row["CustomerReference"].Should().Be("PO-9");
         }
 

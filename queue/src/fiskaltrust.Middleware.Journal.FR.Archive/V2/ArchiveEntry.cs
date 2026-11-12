@@ -145,6 +145,31 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// <summary>The issuer claims the SCU signed (archive-v2 §1.1), read from the signed content.</summary>
         public IssuerClaims Issuer => Content.Links.Issuer;
 
+        /// <summary>
+        /// On a closing (0x2010–0x2013) or the queue stop (0x4002): the start of the period the receipt closes, as the
+        /// LNE or self-certified data set signs it in field 20 (archive-v2 §5, market-fr#221). Field 20 lists every
+        /// closed period shortest first, <c>period,start</c>; the receipt's own period is the last. Null when nothing
+        /// is signed there (InfoCert, a receipt signed before market-fr#221 signed the period) or it does not read.
+        /// </summary>
+        public DateTime? SignedPeriodStart
+        {
+            get
+            {
+                var receiptCase = ReceiptCase & 0xFFFF;
+                if (!(receiptCase >= 0x2010 && receiptCase <= 0x2013 || receiptCase == 0x4002) || Content.Links.Field20 is not { } field)
+                {
+                    return null;
+                }
+                var values = field.Split(';').Last().Split(',');
+                return values.Length == 2 && DateTime.TryParse(values[1], CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var start)
+                    ? start.ToUniversalTime()
+                    : (DateTime?) null;
+            }
+        }
+
+        /// <summary>True when the InfoCert SCU signed the entry: its signed content is a JWS, not a data set.</summary>
+        public bool SignedByInfoCert => Content.Links.Jws;
+
         /// <summary>True on the first entry of a chain, which carries no previous signature: the signed flag <c>N</c> (ADR 0001).</summary>
         public bool StartOfChain { get; }
 

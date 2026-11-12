@@ -19,7 +19,7 @@ public static class FRArchiveStateData
     public static void Apply(ReceiptRequest request, ReceiptResponse response, FRReceiptChain chain, FRPeriodTotals? periodTotals)
     {
         var totals = TotalsOf(request, chain, periodTotals);
-        var lines = request.cbChargeItems is { Count: > 0 } items ? ChargeItemsOf(items) : null;
+        var lines = request.cbChargeItems is { Count: > 0 } items ? ChargeItemsOf(items, FRSalesLines.CountingLines(request)) : null;
         if (totals is null && lines is null)
         {
             return;
@@ -34,7 +34,6 @@ public static class FRArchiveStateData
         {
             stateData.FR.DocumentType = DocumentTypeOf(request);
             stateData.FR.OperationType = OperationTypeOf(request);
-            stateData.FR.CustomerEndpointId = chain == FRReceiptChain.Invoice ? FRCustomerEndpoint.Infer(request) : null;
         }
         if (lines is not null)
         {
@@ -125,12 +124,13 @@ public static class FRArchiveStateData
     /// (<c>FR.AppliesTo</c>), else to the nearest preceding sales line; one before any sales line is
     /// receipt-level (D9).
     /// </summary>
-    public static List<FRStateChargeItem> ChargeItemsOf(IReadOnlyList<ChargeItem> items)
+    public static List<FRStateChargeItem> ChargeItemsOf(IReadOnlyList<ChargeItem> items, IReadOnlyList<bool> countingLines)
     {
         var lines = new List<FRStateChargeItem>(items.Count);
         var salesLines = new List<FRStateChargeItem>();
         var targets = new List<(ChargeItem Item, FRStateChargeItem Target)>();
         FRStateChargeItem? lastSalesLine = null;
+        var index = 0;
         foreach (var item in items)
         {
             var vat = item.VATAmount ?? Math.Round(item.Amount * item.VATRate / (100 + item.VATRate), 2, MidpointRounding.AwayFromZero);
@@ -142,8 +142,9 @@ public static class FRArchiveStateData
                 AmountHT = amountHT,
                 UnitPriceHT = item.Quantity == 0 ? null : Math.Round(amountHT / item.Quantity, 6, MidpointRounding.AwayFromZero),
                 VATNature = (((long) item.ftChargeItemCase >> 8) & 0xFF).ToString("X2", CultureInfo.InvariantCulture),
-                // As the SCU counts the lines it signs (FRSalesLines, #148), so the archive agrees with the signature.
-                CountsAsLine = FRSalesLines.IsSalesLine(item),
+                // As the SCU counts the lines it signs (FRSalesLines, #148), grouped by position when the receipt asks
+                // for it (market-fr#221), so the archive agrees with the signature.
+                CountsAsLine = countingLines[index++],
             };
 
             if (item.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount))

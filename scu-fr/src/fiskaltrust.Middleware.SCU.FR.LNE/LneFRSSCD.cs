@@ -54,7 +54,6 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         Naf = _configuration.Naf,
         LegalForm = _configuration.LegalForm,
         VatOption = _configuration.VatOption,
-        ElectronicAddress = _configuration.ElectronicAddress,
         SignatureCreationDataAvailable = true,
     }.ToFRSSCDInfo());
 
@@ -80,7 +79,7 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
 
-        var dataSet = LneDataSetBuilder.Build(receiptRequest, response, _configuration, request.ChainCounter, previousSignature, request.PeriodTotals, FRStateData.CopyNumber(response), FRStateData.Archive(response));
+        var dataSet = LneDataSetBuilder.Build(receiptRequest, response, _configuration, request.ChainCounter, previousSignature, request.PeriodTotals, FRStateData.CopyNumber(response));
 
         var signature = _signatureCreator.Sign(dataSet);
 

@@ -161,27 +161,13 @@ public class ArchiveContractStateTests
         Apply(Request(0x0001, a, b)).VATSummary.Should().ContainSingle();
     }
 
-    [Theory]
-    [InlineData(0x1002, "FR", null, "123456789", "0225:123456789")]
-    [InlineData(0x1002, "FR", null, "12345678900012", "0225:123456789")]
-    [InlineData(0x1000, "FR", "FR40123456789", "123456789", "0225:123456789")]
-    [InlineData(0x1001, "FR", null, null, null)]
-    [InlineData(0x1002, "DE", "DE123456789", "123456789", null)]
-    [InlineData(0x1002, "FR", null, "0225:x", null)]
-    public void AFrenchBusinessBuyersEndpoint_IsInferredFromItsSiren(long receiptCase, string country, string? vatId, string? taxId, string? endpoint)
-    {
-        var request = Request(receiptCase, Sale(1, 10));
-        request.cbCustomer = new Dictionary<string, string?> { ["CustomerName"] = "Client", ["CustomerCountry"] = country, ["CustomerVATId"] = vatId, ["CustomerTaxId"] = taxId };
-
-        Apply(request).CustomerEndpointId.Should().Be(endpoint);
-    }
-
     [Fact]
-    public void ASentEndpoint_IsNotOverwritten()
+    public void AFrenchBusinessBuyersEndpoint_IsNeverInferred()
     {
         var request = Request(0x1002, Sale(1, 10));
-        request.cbCustomer = new Dictionary<string, string?> { ["CustomerCountry"] = "FR", ["CustomerTaxId"] = "123456789", ["CustomerEndpointId"] = "0225:123456789_A" };
+        request.cbCustomer = new Dictionary<string, string?> { ["CustomerName"] = "Client", ["CustomerCountry"] = "FR", ["CustomerTaxId"] = "123456789" };
 
-        Apply(request).CustomerEndpointId.Should().BeNull("the archive reads the sent value from the request");
+        // market-fr#221: eInvoicing data stays out of the fiscal state; the archive reads a sent endpoint from the request.
+        JsonSerializer.Serialize(Apply(request)).Should().NotContain("0225").And.NotContain("CustomerEndpointId");
     }
 }
