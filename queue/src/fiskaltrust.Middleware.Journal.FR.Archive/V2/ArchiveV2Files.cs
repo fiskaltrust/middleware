@@ -102,9 +102,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
     /// The files of a v2 archive file (ADR 0006, ADR 0019, archive-v2 field contract, market-fr#227, #221).
     /// </summary>
     /// <remarks>
-    /// Not written yet: the issuer data beyond the SIRET (under review, #141), the closing period columns
-    /// (<c>ClosingType</c>, <c>PeriodStart</c>, <c>PeriodEnd</c>), the copy columns and <c>LineCount</c> (#148),
-    /// which their own pull requests add.
+    /// Not written yet: the issuer data beyond the SIRET (under review, #141), the copy columns and
+    /// <c>LineCount</c> (#148), which their own pull requests add.
     /// </remarks>
     public static class ArchiveV2Files
     {
@@ -188,7 +187,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         public static IReadOnlyList<CsvColumn<ArchiveEntry>> JournalColumns(ArchiveJournalKind kind) => kind switch
         {
             ArchiveJournalKind.Sales => CommonColumns.Concat(SalesTotalsColumns).ToList(),
-            ArchiveJournalKind.Closing => CommonColumns.Concat(ClosingTotalsColumns).ToList(),
+            ArchiveJournalKind.Closing => CommonColumns.Concat(ClosingPeriodColumns).Concat(ClosingTotalsColumns).ToList(),
             ArchiveJournalKind.Archive => CommonColumns.Concat(ArchiveReceiptColumns).ToList(),
             _ => CommonColumns,
         };
@@ -276,6 +275,17 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> SalesTotalsColumns = TotalColumns
             .Select(t => Col(t.Name, e => StateNumber(e.StateFR, "Totals", t.Name), t.Label + " du document, acomptes exclus."))
             .ToList();
+
+        /// <summary>
+        /// §1.3: which period a closing or technical receipt closes, stored by the queue in <c>ftStateData.FR.Closing</c>.
+        /// Not signed. <c>PeriodStart</c> and <c>PeriodEnd</c> are empty on a receipt that closes no period.
+        /// </summary>
+        public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> ClosingPeriodColumns = new[]
+        {
+            Col("ClosingType", e => ClosingText(e, "ClosingType"), "Type de clôture : zero (reçu zéro), shift (service), daily (jour), monthly (mois), yearly (année ou exercice), lifecycle (mise en service, mise hors service et autres opérations techniques). Avec PeriodStart et PeriodEnd, identifie la période close."),
+            Col("PeriodStart", e => ClosingMoment(e, "PeriodStart"), "Début (UTC) de la période close : la clôture précédente de même période, ou la mise en service de la caisse. Non signé ; vide si le document ne clôt aucune période."),
+            Col("PeriodEnd", e => ClosingMoment(e, "PeriodEnd"), "Fin (UTC) de la période close : le moment du document de clôture. Non signé ; vide si le document ne clôt aucune période."),
+        };
 
         /// <summary>§1.3: the period totals of a closing, then the perpetual totals, stored in <c>ftStateData.FR.Totals</c>.</summary>
         public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> ClosingTotalsColumns = TotalColumns
@@ -414,6 +424,17 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         private static string? LineNumber(ChildRow<ArchiveEntry, JsonElement> row, string name) => Line(row) is { } line ? RawNumber(line, name) : null;
 
         private static string? LineText(ChildRow<ArchiveEntry, JsonElement> row, string name) => Line(row) is { } line ? ArchiveEntry.Text(line, name) : null;
+
+        private static JsonElement? ClosingBlock(ArchiveEntry entry)
+            => entry.StateFR is { } fr && ArchiveEntry.Property(fr, "Closing") is { ValueKind: JsonValueKind.Object } closing ? closing : (JsonElement?) null;
+
+        private static string? ClosingText(ArchiveEntry entry, string name) => ClosingBlock(entry) is { } closing ? ArchiveEntry.String(closing, name) : null;
+
+        /// <summary>A moment of the closing period, in UTC; a value that is no date as stored.</summary>
+        private static object? ClosingMoment(ArchiveEntry entry, string name)
+            => ClosingBlock(entry) is { } closing
+                ? ArchiveEntry.Moment(closing, name) is { } moment ? moment : (object?) ArchiveEntry.String(closing, name)
+                : null;
 
         private static JsonElement? ArchiveBoundaries(ArchiveEntry entry)
             => entry.StateFR is { } fr && ArchiveEntry.Property(fr, "Archive") is { ValueKind: JsonValueKind.Object } archive ? archive : (JsonElement?) null;

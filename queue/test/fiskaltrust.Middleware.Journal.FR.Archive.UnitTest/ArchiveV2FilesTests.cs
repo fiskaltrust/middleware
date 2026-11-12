@@ -262,6 +262,23 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
+        public async Task ClosingJournals_ReadTheClosingPeriod()
+        {
+            var state = "{\"FR\":{\"Closing\":{\"ClosingType\":\"daily\",\"PeriodStart\":\"2026-11-01T22:00:00.1230000Z\",\"PeriodEnd\":\"2026-11-02T22:00:00.4560000Z\"},\"Totals\":{\"Totalizer\":10}}}";
+            var z1 = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, Request(0x4652_2000_0000_2011), Response("ft1#Z1", "z1", stateData: state))!;
+            var e1 = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 2, Request(0x4652_2000_0000_2000), Response("ft2#E1", "e1", stateData: "{\"FR\":{\"Closing\":{\"ClosingType\":\"zero\"}}}"))!;
+
+            var daily = Rows(await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x00D)!), z1));
+            var technical = Rows(await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x004)!), e1));
+
+            daily[0]["ClosingType"].Should().Be("daily");
+            daily[0]["PeriodStart"].Should().Be("2026-11-01T22:00:00.1230000Z");
+            daily[0]["PeriodEnd"].Should().Be("2026-11-02T22:00:00.4560000Z");
+            technical[0]["ClosingType"].Should().Be("zero");
+            technical[0]["PeriodStart"].Should().BeEmpty("a zero receipt closes no period");
+        }
+
+        [Fact]
         public async Task SignaturesAndJet_HaveOneRowPerItemAndPerJetEvent()
         {
             var jetRequest = "{\"ftReceiptCase\":" + 0x4652_2000_0000_3001L + ",\"cbUser\":\"op1\",\"ftReceiptCaseData\":{\"fr\":{\"code\":50,\"Message\":\"Clôture\",\"Information\":\"jour\"}}}";

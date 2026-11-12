@@ -85,6 +85,14 @@ public class MiddlewareStateDataFR
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public FRStateTotals? Totals { get; set; }
 
+    /// <summary>
+    /// On the closing chains S, Z, M, Y and the technical chain E: which period the receipt closes (archive-v2
+    /// §1.3, <see cref="Logic.FRClosingPeriod"/>). Archived, not signed. Omitted on every other receipt.
+    /// </summary>
+    [JsonPropertyName("Closing")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FRStateClosing? Closing { get; set; }
+
     /// <summary>The computed values of each charge item, in request order (archive-v2 §2, D7).</summary>
     [JsonPropertyName("ChargeItems")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -94,6 +102,21 @@ public class MiddlewareStateDataFR
     [JsonPropertyName("VATSummary")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, FRStateVatSummaryEntry>? VATSummary { get; set; }
+}
+
+/// <summary>The period a closing or technical receipt closes (archive-v2 §1.3), named as the archive columns.</summary>
+public class FRStateClosing
+{
+    /// <summary><c>zero</c>, <c>shift</c>, <c>daily</c>, <c>monthly</c>, <c>yearly</c> or <c>lifecycle</c> (ADR 0002).</summary>
+    public string ClosingType { get; set; } = "";
+
+    /// <summary>Where the period's totals started: the previous closing of that period, else the queue's start. Absent when the receipt closes no period.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTime? PeriodStart { get; set; }
+
+    /// <summary>The closing receipt's own moment. Absent when the receipt closes no period.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTime? PeriodEnd { get; set; }
 }
 
 /// <summary>Totals TTC by VAT case and by pay-item class, named as the archive columns.</summary>

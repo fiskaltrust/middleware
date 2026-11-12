@@ -90,6 +90,20 @@ public class FRPeriodTotalsAccumulator
     }
 
     /// <summary>
+    /// When <paramref name="period"/> was last closed (the 1.2 <c>GLast{Shift,Day,Month,Year}Moment</c>,
+    /// <c>ALastMoment</c>), so where its current totals start; null if it never was.
+    /// </summary>
+    public DateTime? LastClosed(FRTotalsPeriod period) => period switch
+    {
+        FRTotalsPeriod.Shift => _queueFR.GLastShiftMoment,
+        FRTotalsPeriod.Day => _queueFR.GLastDayMoment,
+        FRTotalsPeriod.Month => _queueFR.GLastMonthMoment,
+        FRTotalsPeriod.Year => _queueFR.GLastYearMoment,
+        FRTotalsPeriod.Archive => _queueFR.ALastMoment,
+        _ => null,
+    };
+
+    /// <summary>
     /// Closes a period and records, in the 1.2 columns, which receipt closed it and when
     /// (v1.2 <c>GLast{Shift,Day,Month,Year}Moment</c> and <c>…QueueItemId</c>).
     /// </summary>
