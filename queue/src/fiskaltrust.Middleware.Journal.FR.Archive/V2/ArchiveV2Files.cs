@@ -104,9 +104,6 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
     /// <summary>
     /// The files of a v2 archive file (ADR 0006, ADR 0019, archive-v2 field contract, market-fr#227, #221).
     /// </summary>
-    /// <remarks>
-    /// <c>TotalHT</c>, <c>PrintCount</c> and <c>GuestCount</c> are written empty until their source is decided.
-    /// </remarks>
     public static class ArchiveV2Files
     {
         public static readonly IReadOnlyList<ArchiveJournal> Journals = new[]
@@ -290,16 +287,13 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         /// <summary>
         /// §1.2: what a sales document is, as the queue stored it when it signed (<c>ftStateData.FR</c>), and what the request
-        /// carries for training. <c>TotalHT</c>, <c>PrintCount</c> and <c>GuestCount</c> are written empty until their source is decided.
+        /// carries for training and the guest count.
         /// </summary>
         public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> SalesColumns = new[]
         {
-            // TODO pending decision (#135/#147): the TotalHT basis, as the VAT summary includes down payments and Totalizer excludes them.
-            Col("TotalHT", e => null, "Total HT du document. Vide : sa base (acomptes compris ou non) n'est pas encore décidée."),
-            // TODO pending decision: the source of PrintCount (always 1 on an original?).
-            Col("PrintCount", e => null, "Nombre d'impressions du document original. Vide : sa source n'est pas encore décidée ; les duplicatas sont sur la chaîne D."),
-            // TODO pending decision: the source of GuestCount (no request field carries it).
-            Col("GuestCount", e => null, "Nombre de couverts (restauration). Vide : aucun champ de la requête ne le porte encore."),
+            Col("TotalHT", e => StateNumber(e.StateFR, "TotalHT"), "Total HT du document : somme des montants HT des articles tels que signés, déductions d'acomptes comprises ; égal au total HT du récapitulatif de TVA. Vide sur la chaîne P."),
+            Col("PrintCount", e => StateNumber(e.StateFR, "PrintCount"), "Nombre d'impressions du document original : 1. Chaque réimpression est un duplicata de la chaîne D, numéroté dans CopyNumber."),
+            Col("GuestCount", GuestCount, "Nombre de clients ou de couverts, tel qu'envoyé par le système de caisse (ftReceiptCaseData.FR.GuestCount) ; non signé, non contrôlé. Seulement sur les tickets et les notes ; vide s'il n'est pas envoyé."),
             Col("DocumentType", e => StateText(e, "DocumentType"), "Nature du document (liste 5.8) : ticket, payment-proof, invoice, receipt-without-obligation, delivery-note, note, pro-forma ou order ; un document en mode école a la nature du document qu'il simule."),
             Col("OperationType", e => StateText(e, "OperationType"), "Nature de l'opération : sale (vente), refund (remboursement) ou void (annulation), selon les options de ftReceiptCase."),
             Col("TrainingMention", TrainingMention, "Sur la chaîne X : la mention imprimée du mode école."),
@@ -350,7 +344,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         {
             Col("ClosingType", e => ClosingText(e, "ClosingType"), "Type de clôture : zero (reçu zéro), shift (service), daily (jour), monthly (mois), yearly (année ou exercice), lifecycle (mise en service, mise hors service et autres opérations techniques). Avec PeriodStart et PeriodEnd, identifie la période close."),
             Col("PeriodStart", e => ClosingMoment(e, "PeriodStart"), "Début (UTC) de la période close : la clôture précédente de même période, ou la mise en service de la caisse. Non signé ; vide si le document ne clôt aucune période."),
-            Col("PeriodEnd", e => ClosingMoment(e, "PeriodEnd"), "Fin (UTC) de la période close : le moment du document de clôture. Non signé ; vide si le document ne clôt aucune période."),
+            Col("PeriodEnd", e => ClosingMoment(e, "PeriodEnd"), "Fin (UTC) de la période close : le moment du document de clôture. Signée (champ 12 du jeu de données LNE) ; vide si le document ne clôt aucune période."),
         };
 
         /// <summary>§1.3: the period totals of a closing, then the perpetual totals, stored in <c>ftStateData.FR.Totals</c>.</summary>
@@ -496,6 +490,15 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             => Line(row) is { } line && ArchiveEntry.Property(line, name) is { } value && (value.ValueKind == JsonValueKind.True || value.ValueKind == JsonValueKind.False)
                 ? value.ValueKind == JsonValueKind.True
                 : (bool?) null;
+
+        /// <summary>
+        /// <c>ftReceiptCaseData.FR.GuestCount</c> as sent, on the documents R13 gives a guest count (<c>ENC-TIK-CLI-NBR</c>):
+        /// tickets and notes, a training one included (decided 2026-11-12, market-fr#221). Never signed, not validated.
+        /// </summary>
+        private static string? GuestCount(ArchiveEntry entry)
+            => StateText(entry, "DocumentType") is "ticket" or "note" or "receipt-without-obligation" or "delivery-note" or "order"
+                ? ReceiptCaseDataFR(entry.Request, "GuestCount")
+                : null;
 
         private static string? StateText(ArchiveEntry entry, string name) => entry.StateFR is { } fr ? ArchiveEntry.Text(fr, name) : null;
 
