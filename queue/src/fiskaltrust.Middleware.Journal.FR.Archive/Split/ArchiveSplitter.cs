@@ -1,205 +1,224 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using fiskaltrust.Middleware.Journal.FR.Archive.Model;
 
 namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
 {
-    public sealed class ArchiveSplitOptions
-    {
-        /// <summary>Where the fiscal year starts. Defaults to the calendar year.</summary>
-        public FiscalYear FiscalYear { get; set; } = FiscalYear.Calendar;
-
-        /// <summary>
-        /// The time zone whose wall clock the fiscal-year boundaries are read in. Defaults to UTC.
-        /// Provisional: whether the cut is at local midnight (Europe/Paris, or the overseas zone of the
-        /// outlet) is an open point on market-fr#218.
-        /// </summary>
-        public TimeZoneInfo BoundaryTimeZone { get; set; } = TimeZoneInfo.Utc;
-
-        /// <summary>
-        /// The key used for an empty period when no record of the request gives one (see
-        /// <see cref="ArchiveSplitter.Split{TRecord}"/>). When null, such a period gets no sub-archive.
-        /// </summary>
-        public SubArchiveKey? DefaultKey { get; set; }
-    }
-
     /// <summary>
-    /// Cuts a requested period into main archives at the fiscal-year boundaries (market-fr#146), and each
-    /// main archive into sub-archives by SCU certificate serial number × format version (ADR 0005).
+    /// Cuts the records of a requested period into archive files (ADR 0019, contract section 10.3): one file per
+    /// SCU certificate and format version, never more than a year, each stating its own slice.
     /// </summary>
     public static class ArchiveSplitter
     {
-        /// <summary>The fiscal-year slices of <paramref name="requested"/>, in order.</summary>
-        public static IReadOnlyList<ArchivePeriod> Slices(ArchivePeriod requested, ArchiveSplitOptions? options = null)
+        /// <summary>
+        /// The one-year limit of a file whose first record is at <paramref name="firstMoment"/> (ADR 0018): the file keeps
+        /// an entry while <c>entry.ftReceiptMoment &lt; first.ftReceiptMoment.AddYears(1).Date</c>, in UTC.
+        /// </summary>
+        public static DateTime YearLimit(DateTime firstMoment) => DateTime.SpecifyKind(Utc.Normalize(firstMoment).AddYears(1).Date, DateTimeKind.Utc);
+
+        /// <summary>
+        /// The records a request delivers (contract section 10.3): in queue order, from the first whose moment is at or
+        /// after <paramref name="requested"/>'s start to the last whose moment is before its end, keeping every record
+        /// between them whatever its moment (a clock that jumped), since the chains need it. Empty when none is in the
+        /// period.
+        /// </summary>
+        /// <param name="recordsInQueueOrder">The candidate records, in queue order.</param>
+        public static IReadOnlyList<TRecord> Select<TRecord>(IReadOnlyList<TRecord> recordsInQueueOrder, Func<TRecord, DateTime> momentOf, ArchivePeriod requested)
         {
-            if (requested is null)
+            if (recordsInQueueOrder is null) throw new ArgumentNullException(nameof(recordsInQueueOrder));
+            if (momentOf is null) throw new ArgumentNullException(nameof(momentOf));
+            if (requested is null) throw new ArgumentNullException(nameof(requested));
+
+            var first = -1;
+            for (var i = 0; i < recordsInQueueOrder.Count; i++)
             {
-                throw new ArgumentNullException(nameof(requested));
+                if (Utc.Normalize(momentOf(recordsInQueueOrder[i])) >= requested.Start)
+                {
+                    first = i;
+                    break;
+                }
             }
-            options ??= new ArchiveSplitOptions();
-            var slices = new List<ArchivePeriod>();
-            var cursor = requested.Start;
-            while (cursor < requested.End)
+            var last = -1;
+            for (var i = recordsInQueueOrder.Count - 1; i >= 0; i--)
             {
-                var local = TimeZoneInfo.ConvertTimeFromUtc(cursor, options.BoundaryTimeZone);
-                var nextStartLocal = options.FiscalYear.StartOfYearContaining(local).AddYears(1);
-                var nextBoundary = ToUtc(nextStartLocal, options.BoundaryTimeZone);
-                var sliceEnd = nextBoundary < requested.End ? nextBoundary : requested.End;
-                slices.Add(new ArchivePeriod(cursor, sliceEnd));
-                cursor = sliceEnd;
+                if (Utc.Normalize(momentOf(recordsInQueueOrder[i])) < requested.End)
+                {
+                    last = i;
+                    break;
+                }
             }
-            return slices;
+            if (first < 0 || last < first)
+            {
+                return Array.Empty<TRecord>();
+            }
+            var selected = new List<TRecord>(last - first + 1);
+            for (var i = first; i <= last; i++)
+            {
+                selected.Add(recordsInQueueOrder[i]);
+            }
+            return selected;
         }
 
         /// <summary>
-        /// Splits <paramref name="records"/> (supplied in chain order) over <paramref name="requested"/>.
-        /// Records outside the requested period are ignored. Every fiscal-year slice yields a main archive,
-        /// including slices without records (market-fr#146): such a slice gets one empty sub-archive keyed on
-        /// the last key seen before it, else the first key seen after it, else
-        /// <see cref="ArchiveSplitOptions.DefaultKey"/>, else no sub-archive at all.
+        /// The files of a request: its records (<see cref="Select{TRecord}"/>) cut, in queue order, when the next record has
+        /// another certificate, another format version (the half migration), or is at or past the year limit of the file's
+        /// first record. An archive receipt is no cut point. A request without records gives no file.
         /// </summary>
-        public static IReadOnlyList<MainArchive<TRecord>> Split<TRecord>(
-            IEnumerable<TRecord> records,
+        /// <param name="recordsInQueueOrder">The candidate records, in queue order; those outside the request are left out as <see cref="Select{TRecord}"/> says.</param>
+        public static IReadOnlyList<ArchiveFile<TRecord>> Split<TRecord>(
+            IReadOnlyList<TRecord> recordsInQueueOrder,
             Func<TRecord, DateTime> momentOf,
-            Func<TRecord, SubArchiveKey> keyOf,
-            ArchivePeriod requested,
-            ArchiveSplitOptions? options = null)
+            Func<TRecord, ArchiveFileKey> keyOf,
+            ArchivePeriod requested)
         {
-            if (records is null) throw new ArgumentNullException(nameof(records));
-            if (momentOf is null) throw new ArgumentNullException(nameof(momentOf));
             if (keyOf is null) throw new ArgumentNullException(nameof(keyOf));
-            options ??= new ArchiveSplitOptions();
+            var records = Select(recordsInQueueOrder, momentOf, requested);
 
-            var slices = Slices(requested, options);
-            var buckets = slices.Select(_ => new SliceBucket<TRecord>()).ToArray();
-            var starts = slices.Select(s => s.Start).ToArray();
-
+            var runs = new List<Run<TRecord>>();
+            Run<TRecord>? current = null;
             foreach (var record in records)
             {
                 var moment = Utc.Normalize(momentOf(record));
-                if (!requested.Contains(moment))
+                var key = keyOf(record) ?? throw new ArgumentException("Every record needs an archive file key.", nameof(keyOf));
+                var closedBy = current is null ? (ArchiveClosedBy?) null
+                    : !string.Equals(key.CertificateSerialNumber, current.Key.CertificateSerialNumber, StringComparison.OrdinalIgnoreCase)
+                        ? key.FormatVersion.Equals(current.Key.FormatVersion) ? ArchiveClosedBy.LastSignedEntry : ArchiveClosedBy.FormatChange
+                    : !key.FormatVersion.Equals(current.Key.FormatVersion) ? ArchiveClosedBy.FormatChange
+                    : moment >= current.Limit ? ArchiveClosedBy.YearLimit
+                    : (ArchiveClosedBy?) null;
+                if (current is null || closedBy is not null)
                 {
-                    continue;
+                    if (current is not null)
+                    {
+                        current.ClosedBy = closedBy!.Value;
+                    }
+                    current = new Run<TRecord>(key, moment);
+                    runs.Add(current);
                 }
-                var index = Array.BinarySearch(starts, moment);
-                if (index < 0)
-                {
-                    index = ~index - 1;
-                }
-                buckets[index].Add(keyOf(record), record, moment);
+                current.Add(record, moment);
             }
 
-            var result = new List<MainArchive<TRecord>>(slices.Count);
-            SubArchiveKey? lastKeySeen = null;
-            for (var i = 0; i < slices.Count; i++)
+            var files = new List<ArchiveFile<TRecord>>(runs.Count);
+            DateTime? previousEnd = null;
+            for (var i = 0; i < runs.Count; i++)
             {
-                var bucket = buckets[i];
-                if (bucket.Groups.Count > 0)
+                var run = runs[i];
+                var end = Min(requested.End, run.Limit);
+                if (i + 1 < runs.Count && runs[i + 1].FirstMoment < end)
                 {
-                    result.Add(new MainArchive<TRecord>(slices[i], Partition(bucket.Groups, slices[i])));
-                    lastKeySeen = bucket.LastKey;
-                    continue;
+                    end = runs[i + 1].FirstMoment;
+                }
+                if (end <= run.LastMoment)
+                {
+                    // A clock set back at the cut: the slice still holds its own last record.
+                    end = run.LastMoment.AddTicks(1);
                 }
 
-                var key = lastKeySeen
-                          ?? buckets.Skip(i + 1).Where(b => b.Groups.Count > 0).Select(b => b.Groups[0].Key).FirstOrDefault()
-                          ?? options.DefaultKey;
-                var subArchives = key is null
-                    ? new List<SubArchive<TRecord>>()
-                    : new List<SubArchive<TRecord>> { new SubArchive<TRecord>(key, slices[i], Array.Empty<TRecord>(), null, null) };
-                result.Add(new MainArchive<TRecord>(slices[i], subArchives));
+                var start = previousEnd ?? requested.Start;
+                if (start > run.FirstMoment || end > start.AddYears(1))
+                {
+                    start = run.FirstMoment;
+                }
+                files.Add(new ArchiveFile<TRecord>(run.Key, run.Records, run.FirstMoment, run.LastMoment, new ArchivePeriod(start, end), requested,
+                    i + 1, runs.Count, i + 1 < runs.Count ? run.ClosedBy : ArchiveClosedBy.PeriodEnd));
+                previousEnd = end;
             }
-            return result;
+            return files;
         }
 
         /// <summary>
-        /// The sub-archives' periods partition the main period without gaps or overlaps, in time order
-        /// (market-fr#262): the first starts with the main period, each next one where the previous one
-        /// ends, at its own first record, and the last ends with the main period. Each sub-archive is one
-        /// contiguous run of one key, so an SCU switched out and back in (A → B → A) gives A two runs.
-        /// Runs whose moments overlap (records supplied out of time order) cannot be partitioned, and fail.
+        /// A fixed file (ADR 0018, contract section 10.3): the records from <paramref name="firstId"/> to <paramref name="lastId"/>
+        /// included, in queue order, bounded by records and not by dates, as a <c>ForcedArchive</c> entry names them.
         /// </summary>
-        private static List<SubArchive<TRecord>> Partition<TRecord>(List<Group<TRecord>> groups, ArchivePeriod slice)
+        /// <param name="recordsInQueueOrder">Candidate records in queue order; they must hold both named records.</param>
+        /// <param name="forcedArchive">The <c>ForcedArchive</c> action journal entry's id, written to the manifest.</param>
+        /// <exception cref="ArgumentException">
+        /// A named record is missing or the last comes before the first, the range crosses a cut (another certificate or
+        /// format version), or a record is at or past the year limit of the first. The closing rule (the file ends on the
+        /// last daily closing before the limit) is the caller's check: this package does not know daily closings.
+        /// </exception>
+        public static ArchiveFile<TRecord> Range<TRecord>(
+            IReadOnlyList<TRecord> recordsInQueueOrder,
+            Func<TRecord, Guid> idOf,
+            Guid firstId,
+            Guid lastId,
+            Func<TRecord, DateTime> momentOf,
+            Func<TRecord, ArchiveFileKey> keyOf,
+            ArchiveClosedBy closedBy = ArchiveClosedBy.YearLimit,
+            string? forcedArchive = null)
         {
-            var ordered = groups.OrderBy(g => g.First).ToList();
-            var subArchives = new List<SubArchive<TRecord>>(ordered.Count);
-            for (var g = 0; g < ordered.Count; g++)
+            if (recordsInQueueOrder is null) throw new ArgumentNullException(nameof(recordsInQueueOrder));
+            if (idOf is null) throw new ArgumentNullException(nameof(idOf));
+            if (momentOf is null) throw new ArgumentNullException(nameof(momentOf));
+            if (keyOf is null) throw new ArgumentNullException(nameof(keyOf));
+
+            var first = -1;
+            var last = -1;
+            for (var i = 0; i < recordsInQueueOrder.Count; i++)
             {
-                var start = g == 0 ? slice.Start : ordered[g].First!.Value;
-                var end = g == ordered.Count - 1 ? slice.End : ordered[g + 1].First!.Value;
-                if (g < ordered.Count - 1 && ordered[g].Last!.Value >= end)
-                {
-                    throw new NotSupportedException(
-                        $"In {slice}, run {ordered[g].Run} of SCU certificate {ordered[g].Key.CertificateSerialNumber} (format {ordered[g].Key.FormatVersion}) ends after run {ordered[g + 1].Run} of {ordered[g + 1].Key.CertificateSerialNumber} (format {ordered[g + 1].Key.FormatVersion}) begins: " +
-                        "the records are not in time order, and sub-archive periods must not overlap (fiskaltrust/market-fr#262).");
-                }
-                subArchives.Add(ordered[g].ToSubArchive(new ArchivePeriod(start, end)));
+                var id = idOf(recordsInQueueOrder[i]);
+                if (first < 0 && id == firstId) first = i;
+                if (id == lastId) last = i;
             }
-            return subArchives;
+            if (first < 0 || last < 0)
+            {
+                throw new ArgumentException($"The record range {firstId} to {lastId} names a record that is not among the records given.", nameof(recordsInQueueOrder));
+            }
+            if (last < first)
+            {
+                throw new ArgumentException($"The record range ends ({lastId}) before it starts ({firstId}) in queue order.", nameof(lastId));
+            }
+
+            var key = keyOf(recordsInQueueOrder[first]);
+            var firstMoment = Utc.Normalize(momentOf(recordsInQueueOrder[first]));
+            var limit = YearLimit(firstMoment);
+            var records = new List<TRecord>(last - first + 1);
+            for (var i = first; i <= last; i++)
+            {
+                var record = recordsInQueueOrder[i];
+                if (!key.Equals(keyOf(record)))
+                {
+                    throw new ArgumentException($"The record range {firstId} to {lastId} crosses a cut: {idOf(record)} has {keyOf(record)}, the first record {key}.", nameof(recordsInQueueOrder));
+                }
+                if (Utc.Normalize(momentOf(record)) >= limit)
+                {
+                    throw new ArgumentException($"The record range {firstId} to {lastId} reaches the year limit {limit:o}: {idOf(record)} is past it.", nameof(recordsInQueueOrder));
+                }
+                records.Add(record);
+            }
+            return new ArchiveFile<TRecord>(key, records, firstMoment, Utc.Normalize(momentOf(recordsInQueueOrder[last])), closedBy, forcedArchive);
         }
 
-        private static DateTime ToUtc(DateTime localWallClock, TimeZoneInfo zone)
+        private static DateTime Min(DateTime a, DateTime b) => a < b ? a : b;
+
+        private sealed class Run<TRecord>
         {
-            // A boundary that falls in a daylight-saving gap does not exist; take the first valid instant after it.
-            while (zone.IsInvalidTime(localWallClock))
-            {
-                localWallClock = localWallClock.AddMinutes(30);
-            }
-            return DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeToUtc(localWallClock, zone), DateTimeKind.Utc);
-        }
-
-        private sealed class SliceBucket<TRecord>
-        {
-            /// <summary>One group per contiguous run of a key, in record order (market-fr#262).</summary>
-            public List<Group<TRecord>> Groups { get; } = new List<Group<TRecord>>();
-
-            /// <summary>The key of the last record added, which is also the key of the last run.</summary>
-            public SubArchiveKey? LastKey { get; private set; }
-
-            public void Add(SubArchiveKey key, TRecord record, DateTime moment)
-            {
-                if (key is null)
-                {
-                    throw new ArgumentException("Every record needs a sub-archive key.", nameof(key));
-                }
-                if (!key.Equals(LastKey))
-                {
-                    Groups.Add(new Group<TRecord>(key, Groups.Count(g => g.Key.Equals(key)) + 1));
-                }
-                Groups[Groups.Count - 1].Add(record, moment);
-                LastKey = key;
-            }
-        }
-
-        private sealed class Group<TRecord>
-        {
-            private readonly List<TRecord> _records = new List<TRecord>();
-            private DateTime? _first;
-            private DateTime? _last;
-
-            public Group(SubArchiveKey key, int run)
+            public Run(ArchiveFileKey key, DateTime firstMoment)
             {
                 Key = key;
-                Run = run;
+                FirstMoment = firstMoment;
+                LastMoment = firstMoment;
+                Limit = YearLimit(firstMoment);
             }
 
-            public SubArchiveKey Key { get; }
+            public ArchiveFileKey Key { get; }
 
-            public int Run { get; }
+            public List<TRecord> Records { get; } = new List<TRecord>();
 
-            public DateTime? First => _first;
+            public DateTime FirstMoment { get; }
 
-            public DateTime? Last => _last;
+            /// <summary>The moment of the run's last record in queue order, not the latest moment.</summary>
+            public DateTime LastMoment { get; private set; }
+
+            public DateTime Limit { get; }
+
+            public ArchiveClosedBy ClosedBy { get; set; } = ArchiveClosedBy.PeriodEnd;
 
             public void Add(TRecord record, DateTime moment)
             {
-                _records.Add(record);
-                if (_first is null || moment < _first) _first = moment;
-                if (_last is null || moment > _last) _last = moment;
+                Records.Add(record);
+                LastMoment = moment;
             }
-
-            public SubArchive<TRecord> ToSubArchive(ArchivePeriod period) => new SubArchive<TRecord>(Key, period, _records, _first, _last, Run);
         }
     }
 }

@@ -6,56 +6,65 @@ using System.Text.Json.Serialization;
 namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
 {
     /// <summary>
-    /// manifest.json of a main archive or a sub-archive (market-fr#133): the period, the generation date,
-    /// the SIRET, the signing certificate, and each file with its hash and signature. The manifest itself
-    /// is signed in manifest.sig (base64 signature over the SHA-256 of the manifest.json bytes).
-    /// Provisional layout, pending the archive specification.
+    /// <c>manifest.json</c> of an archive file, the one manifest kind (contract section 10.2, ADR 0019): which entries
+    /// the file holds and why it ends, the SCU certificate that signed them, and each file with its hash and signature.
+    /// The manifest itself is signed in <c>manifest.sig</c> (base64 signature over the SHA-256 of the manifest.json bytes).
+    /// camelCase keys, absent keys omitted.
     /// </summary>
     public sealed class ArchiveManifest
     {
-        public const string MainKind = "main";
-        public const string SubKind = "sub";
-
+        /// <summary>A string, as TaxAuditorTool reads it; the contract writes it <c>1</c>.</summary>
         public string ManifestVersion { get; set; } = "1";
-
-        /// <summary><see cref="MainKind"/> or <see cref="SubKind"/>.</summary>
-        public string Kind { get; set; } = MainKind;
-
-        /// <summary>For a sub-archive: the SCU certificate serial number it is cut on.</summary>
-        public string? CertificateSerialNumber { get; set; }
-
-        /// <summary>For a sub-archive: its archive format version.</summary>
-        public string? FormatVersion { get; set; }
-
-        /// <summary>For a sub-archive: which contiguous run of its SCU certificate and format version it is, from 1 (market-fr#262).</summary>
-        public int? Run { get; set; }
 
         /// <summary>
         /// The column schema of the receipts, <c>InfoCert</c> or <c>LNE</c> (self-certified SCUs use <c>LNE</c>): it also tells a
         /// verifier how the receipt signatures are encoded when the certificate does not say (market-fr#262, #263).
-        /// For a main archive, the schema of its newest sub-archive.
         /// </summary>
         public string? Schema { get; set; }
+
+        /// <summary>The serial number of the SCU certificate that signed the file's entries and the file.</summary>
+        public string? CertificateSerialNumber { get; set; }
+
+        public string? FormatVersion { get; set; }
 
         public string Siret { get; set; } = string.Empty;
 
         public string? DocumentationUrl { get; set; }
 
-        /// <summary>Inclusive start of the archived period, UTC.</summary>
-        public DateTime PeriodStart { get; set; }
+        public DateTime GeneratedAt { get; set; }
 
-        /// <summary>Exclusive end of the archived period, UTC.</summary>
-        public DateTime PeriodEnd { get; set; }
+        /// <summary>Inclusive start of the file's slice, UTC; absent on a fixed file, which is bounded by records.</summary>
+        public DateTime? PeriodStart { get; set; }
 
-        /// <summary>Moment of the first archived record, null for an empty archive (market-fr#146).</summary>
-        public DateTime? FirstRecordMoment { get; set; }
+        /// <summary>Exclusive end of the file's slice, UTC, never more than a year after <see cref="PeriodStart"/>.</summary>
+        public DateTime? PeriodEnd { get; set; }
 
-        /// <summary>Moment of the last archived record, null for an empty archive (market-fr#146).</summary>
-        public DateTime? LastRecordMoment { get; set; }
+        /// <summary>The whole requested period's start; absent on a fixed file.</summary>
+        public DateTime? RequestStart { get; set; }
+
+        public DateTime? RequestEnd { get; set; }
+
+        /// <summary>The file's place among the files the request was split into, from 1; absent on a fixed file.</summary>
+        public int? Part { get; set; }
+
+        public int? PartCount { get; set; }
+
+        /// <summary>The file's first entry in queue order.</summary>
+        public ManifestRecord? FirstRecord { get; set; }
+
+        /// <summary>The file's last entry in queue order.</summary>
+        public ManifestRecord? LastRecord { get; set; }
 
         public int RecordCount { get; set; }
 
-        public DateTime GeneratedAt { get; set; }
+        /// <summary>Why the file ends: <c>periodEnd</c>, <c>lastSignedEntry</c>, <c>formatChange</c>, <c>yearLimit</c> or <c>archiveReceipt</c>.</summary>
+        public string? ClosedBy { get; set; }
+
+        /// <summary>On a fixed file at the one-year limit: the <c>ForcedArchive</c> action journal entry's id (ADR 0018).</summary>
+        public string? ForcedArchive { get; set; }
+
+        /// <summary>When <see cref="ClosedBy"/> is <c>archiveReceipt</c>: that receipt.</summary>
+        public ManifestRecord? ArchiveReceipt { get; set; }
 
         public ManifestCertificate SigningCertificate { get; set; } = new ManifestCertificate();
 
@@ -66,16 +75,23 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
         public List<ManifestFile> Files { get; set; } = new List<ManifestFile>();
 
         /// <summary>
-        /// For a main archive: the signed index of its sub-archives (each also listed in <see cref="Files"/>),
-        /// signed with the key of the newest sub-archive's SCU (market-fr#262).
-        /// </summary>
-        public List<ManifestSubArchive>? SubArchives { get; set; }
-
-        /// <summary>
-        /// For a sub-archive: per chain, its first entry and the previous signature that entry covers
-        /// (market-fr#262, #121), so consecutive sub-archives can be checked to chain to each other.
+        /// Per chain present in the file: its first entry and the previous signature that entry covers
+        /// (market-fr#262, #121), so consecutive files can be checked to chain to each other.
         /// </summary>
         public List<ManifestChainAnchor>? ChainAnchors { get; set; }
+    }
+
+    /// <summary>An entry as the manifest names it: <c>{ftReceiptIdentification, ftQueueItemID, ftReceiptMoment}</c>.</summary>
+    public sealed class ManifestRecord
+    {
+        [JsonPropertyName("ftReceiptIdentification")]
+        public string ReceiptIdentification { get; set; } = string.Empty;
+
+        [JsonPropertyName("ftQueueItemID")]
+        public Guid QueueItemId { get; set; }
+
+        [JsonPropertyName("ftReceiptMoment")]
+        public DateTime ReceiptMoment { get; set; }
     }
 
     public sealed class ManifestChainAnchor
@@ -83,10 +99,10 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
         /// <summary>The chain letter, as written into <c>ftReceiptIdentification</c>.</summary>
         public string Chain { get; set; } = string.Empty;
 
-        /// <summary>The <c>ftReceiptIdentification</c> of the chain's first entry in this sub-archive.</summary>
+        /// <summary>The <c>ftReceiptIdentification</c> of the chain's first entry in this file.</summary>
         public string FirstReceiptIdentification { get; set; } = string.Empty;
 
-        /// <summary>The signature that entry covers, verbatim; empty when the chain starts in this sub-archive.</summary>
+        /// <summary>The signature that entry covers, verbatim; empty when the chain starts in this file.</summary>
         public string PreviousSignature { get; set; } = string.Empty;
     }
 
@@ -116,36 +132,6 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
 
         /// <summary>Base64 signature over <see cref="Hash"/>.</summary>
         public string Signature { get; set; } = string.Empty;
-    }
-
-    public sealed class ManifestSubArchive
-    {
-        public string FileName { get; set; } = string.Empty;
-
-        public string CertificateSerialNumber { get; set; } = string.Empty;
-
-        public string FormatVersion { get; set; } = string.Empty;
-
-        /// <summary>The sub-archive's <see cref="ArchiveManifest.Run"/>.</summary>
-        public int Run { get; set; }
-
-        /// <summary>The sub-archive's <see cref="ArchiveManifest.Schema"/>.</summary>
-        public string? Schema { get; set; }
-
-        public int RecordCount { get; set; }
-
-        /// <summary>Inclusive start of the sub-archive's period, UTC.</summary>
-        public DateTime PeriodStart { get; set; }
-
-        /// <summary>Exclusive end of the sub-archive's period, UTC.</summary>
-        public DateTime PeriodEnd { get; set; }
-
-        public DateTime? FirstRecordMoment { get; set; }
-
-        public DateTime? LastRecordMoment { get; set; }
-
-        /// <summary>Base64 SHA-256 of the sub-archive zip, the same value as its <see cref="ArchiveManifest.Files"/> entry.</summary>
-        public string Hash { get; set; } = string.Empty;
     }
 
     internal static class ManifestSerializer

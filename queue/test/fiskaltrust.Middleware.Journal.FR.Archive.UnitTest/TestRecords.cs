@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using fiskaltrust.Middleware.Journal.FR.Archive.Csv;
 using fiskaltrust.Middleware.Journal.FR.Archive.Model;
+using fiskaltrust.Middleware.Journal.FR.Archive.Packaging;
 using fiskaltrust.Middleware.Journal.FR.Archive.Writing;
 
 namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
@@ -26,7 +27,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         public string Text { get; set; } = string.Empty;
         public List<TestLine> Lines { get; set; } = new List<TestLine>();
 
-        public SubArchiveKey Key => new SubArchiveKey(Serial, Version);
+        public ArchiveFileKey Key => new ArchiveFileKey(Serial, Version);
+
+        public ManifestRecord Describe() => new ManifestRecord { ReceiptIdentification = Chain + Id.ToString("N").Substring(0, 4), QueueItemId = Id, ReceiptMoment = Moment };
 
         public static TestRecord At(int year, int month, int day, string serial = "0A1B", ArchiveFormatVersion? version = null)
             => new TestRecord { Moment = new DateTime(year, month, day, 12, 0, 0, DateTimeKind.Utc), Serial = serial, Version = version ?? ArchiveFormatVersion.V2 };
@@ -34,7 +37,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
 
     internal static class TestFixtures
     {
-        public static CsvSubArchiveWriter<TestRecord> Writer(ArchiveFormatVersion version) => new CsvSubArchiveWriter<TestRecord>(version, new ICsvFileDefinition<TestRecord>[]
+        public static CsvArchiveWriter<TestRecord> Writer(ArchiveFormatVersion version) => new CsvArchiveWriter<TestRecord>(version, new ICsvFileDefinition<TestRecord>[]
         {
             new FlatCsvFile<TestRecord>("journal-T.csv", new[]
             {

@@ -74,8 +74,7 @@ public class FRArchiveSignedLinksTests : IDisposable
 
         var bytes = await ReadAsync(JournalTypeFR.ArchiveExport, from.Ticks);
         using var zip = new ZipArchive(new MemoryStream(bytes));
-        using var subArchive = new ZipArchive(zip.Entries.Single(e => e.Name.StartsWith("subarchive_")).Open());
-        using var manifest = JsonDocument.Parse(ReadEntry(subArchive, ArchivePackager<object>.ManifestFileName));
+        using var manifest = JsonDocument.Parse(ReadEntry(zip, ArchivePackager<object>.ManifestFileName));
         var anchor = manifest.RootElement.GetProperty("chainAnchors").EnumerateArray().Single(a => a.GetProperty("chain").GetString() == "T");
         anchor.GetProperty("previousSignature").GetString().Should().Be(V12Signature, "a chain anchor is empty only when the entry starts the chain (archive-v2 §10.2)");
     }
@@ -122,8 +121,7 @@ public class FRArchiveSignedLinksTests : IDisposable
 
         var bytes = await ReadAsync(JournalTypeFR.ArchiveExport, from.Ticks);
         using var zip = new ZipArchive(new MemoryStream(bytes));
-        using var subArchive = new ZipArchive(zip.Entries.Single(e => e.Name.StartsWith("subarchive_")).Open());
-        using var manifest = JsonDocument.Parse(ReadEntry(subArchive, ArchivePackager<object>.ManifestFileName));
+        using var manifest = JsonDocument.Parse(ReadEntry(zip, ArchivePackager<object>.ManifestFileName));
         manifest.RootElement.GetProperty("recordCount").GetInt32().Should().Be(count);
     }
 

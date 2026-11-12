@@ -10,7 +10,7 @@ using fiskaltrust.Middleware.Journal.FR.Archive.Model;
 namespace fiskaltrust.Middleware.Journal.FR.Archive.Writing
 {
     /// <summary>
-    /// Receives the files of one (sub-)archive. Each file is streamed straight into the archive, hashed and
+    /// Receives the files of one archive file. Each file is streamed straight into the archive, hashed and
     /// signed on the way, and listed in the manifest; nothing is staged on disk.
     /// </summary>
     public interface IArchiveFileSink
@@ -19,32 +19,32 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Writing
     }
 
     /// <summary>
-    /// Writes the files of a sub-archive for one archive format version (ADR 0005: a format change splits
-    /// the archive, so each version keeps its own writer).
+    /// Writes the data files of an archive file for one archive format version (a format change ends the file,
+    /// ADR 0019, so each version keeps its own writer).
     /// </summary>
-    public interface ISubArchiveWriter<TRecord>
+    public interface IArchiveFileWriter<TRecord>
     {
         ArchiveFormatVersion FormatVersion { get; }
 
-        Task WriteAsync(SubArchive<TRecord> subArchive, IArchiveFileSink sink, CancellationToken cancellationToken);
+        Task WriteAsync(ArchiveFile<TRecord> file, IArchiveFileSink sink, CancellationToken cancellationToken);
     }
 
     /// <summary>
-    /// A sub-archive writer made of CSV files (ADR 0006). The file and column sets are injected: they come
-    /// from the field specification of the format version (market-fr#215, #214, #216). An empty
-    /// sub-archive still gets every file, with its header only (market-fr#146).
+    /// An archive file writer made of CSV files (ADR 0006). The file and column sets are injected: they come
+    /// from the field specification of the format version (market-fr#215, #214, #216). A CSV file without
+    /// rows still gets its header (market-fr#146).
     /// </summary>
-    public sealed class CsvSubArchiveWriter<TRecord> : ISubArchiveWriter<TRecord>
+    public sealed class CsvArchiveWriter<TRecord> : IArchiveFileWriter<TRecord>
     {
         private readonly IReadOnlyList<ICsvFileDefinition<TRecord>> _files;
         private readonly CsvOptions _options;
 
-        public CsvSubArchiveWriter(ArchiveFormatVersion formatVersion, IReadOnlyList<ICsvFileDefinition<TRecord>> files, CsvOptions? options = null)
+        public CsvArchiveWriter(ArchiveFormatVersion formatVersion, IReadOnlyList<ICsvFileDefinition<TRecord>> files, CsvOptions? options = null)
         {
             FormatVersion = formatVersion ?? throw new ArgumentNullException(nameof(formatVersion));
             if (files is null || files.Count == 0)
             {
-                throw new ArgumentException("A sub-archive writer needs at least one file.", nameof(files));
+                throw new ArgumentException("An archive file writer needs at least one file.", nameof(files));
             }
             var duplicate = files.GroupBy(f => f.FileName, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
             if (duplicate is not null)
@@ -57,20 +57,20 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Writing
 
         public ArchiveFormatVersion FormatVersion { get; }
 
-        public async Task WriteAsync(SubArchive<TRecord> subArchive, IArchiveFileSink sink, CancellationToken cancellationToken)
+        public async Task WriteAsync(ArchiveFile<TRecord> file, IArchiveFileSink sink, CancellationToken cancellationToken)
         {
-            if (subArchive is null) throw new ArgumentNullException(nameof(subArchive));
+            if (file is null) throw new ArgumentNullException(nameof(file));
             if (sink is null) throw new ArgumentNullException(nameof(sink));
-            if (!subArchive.Key.FormatVersion.Equals(FormatVersion))
+            if (!file.Key.FormatVersion.Equals(FormatVersion))
             {
-                throw new InvalidOperationException($"Writer for format version {FormatVersion} given a sub-archive of version {subArchive.Key.FormatVersion}.");
+                throw new InvalidOperationException($"Writer for format version {FormatVersion} given an archive file of version {file.Key.FormatVersion}.");
             }
-            foreach (var file in _files)
+            foreach (var csv in _files)
             {
-                await sink.WriteFileAsync(file.FileName, async (stream, ct) =>
+                await sink.WriteFileAsync(csv.FileName, async (stream, ct) =>
                 {
                     using var writer = new StreamWriter(stream, _options.Encoding, 64 * 1024, leaveOpen: true) { NewLine = _options.NewLine };
-                    await file.WriteAsync(subArchive.Records, writer, _options, ct).ConfigureAwait(false);
+                    await csv.WriteAsync(file.Records, writer, _options, ct).ConfigureAwait(false);
                     await writer.FlushAsync().ConfigureAwait(false);
                 }, cancellationToken).ConfigureAwait(false);
             }

@@ -58,7 +58,16 @@ public sealed class ScuArchiveSigner : IArchiveSigner
             throw new NotSupportedException($"The queue's SCU signs with {signingCertificate.SignatureAlgorithm}, which the archive package does not read.");
         }
 
-        return new ScuArchiveSigner(scu, new X509Certificate2(Convert.FromBase64String(signingCertificate.CertificateBase64)), signingCertificate.CertificateSerialNumber, signingCertificate.SignatureAlgorithm);
+        X509Certificate2 certificate;
+        try
+        {
+            certificate = new X509Certificate2(Convert.FromBase64String(signingCertificate.CertificateBase64 ?? throw new FormatException("no certificate")));
+        }
+        catch (Exception ex) when (ex is FormatException || ex is System.Security.Cryptography.CryptographicException)
+        {
+            throw new NotSupportedException($"{CannotSign}: the SCU's certificate cannot be read ({ex.Message}).", ex);
+        }
+        return new ScuArchiveSigner(scu, certificate, signingCertificate.CertificateSerialNumber, signingCertificate.SignatureAlgorithm);
     }
 
     /// <exception cref="InvalidOperationException">The SCU did not sign the hash.</exception>
@@ -74,8 +83,12 @@ public sealed class ScuArchiveSigner : IArchiveSigner
             throw new InvalidOperationException($"{CannotSign}: {ex.Message}", ex);
         }
 
-        return signature.Failure is null
-            ? signature.Signature
-            : throw new InvalidOperationException($"{CannotSign}: {signature.Failure}");
+        if (signature.Failure is not null)
+        {
+            throw new InvalidOperationException($"{CannotSign}: {signature.Failure}");
+        }
+        return signature.Signature is { Length: > 0 } bytes
+            ? bytes
+            : throw new InvalidOperationException($"{CannotSign}: the SCU returned no signature.");
     }
 }

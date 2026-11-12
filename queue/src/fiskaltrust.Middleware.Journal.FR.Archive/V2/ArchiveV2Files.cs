@@ -5,6 +5,7 @@ using System.Text.Json;
 using fiskaltrust.Middleware.Journal.FR.Archive.Csv;
 using fiskaltrust.Middleware.Journal.FR.Archive.Model;
 using fiskaltrust.Middleware.Journal.FR.Archive.Packaging;
+using fiskaltrust.Middleware.Journal.FR.Archive.Signing;
 using fiskaltrust.Middleware.Journal.FR.Archive.Writing;
 
 namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
@@ -98,7 +99,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
     }
 
     /// <summary>
-    /// The files of a v2 sub-archive (ADR 0006, archive-v2 field contract, market-fr#227, #221).
+    /// The files of a v2 archive file (ADR 0006, ADR 0019, archive-v2 field contract, market-fr#227, #221).
     /// </summary>
     /// <remarks>
     /// Not written yet: the issuer data beyond the SIRET (under review, #141), the closing period columns
@@ -125,24 +126,36 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         };
 
         /// <summary>
-        /// One anchor per journal file with rows in <paramref name="subArchive"/> (market-fr#262, contract section 10):
+        /// One anchor per journal file with rows in <paramref name="file"/> (market-fr#262, contract section 10.2):
         /// <c>chain</c> is the journal letter, <c>firstReceiptIdentification</c> its first row, and <c>previousSignature</c>
         /// exactly what that row's <c>PreviousSignature</c> column holds (the Base64Url signature part, empty at a chain's start).
         /// </summary>
-        public static IReadOnlyList<ManifestChainAnchor> ChainAnchorsOf(SubArchive<ArchiveEntry> subArchive)
+        public static IReadOnlyList<ManifestChainAnchor> ChainAnchorsOf(ArchiveFile<ArchiveEntry> file)
             => Journals
-                .Select(journal => (journal, first: subArchive.Records.FirstOrDefault(journal.Holds)))
+                .Select(journal => (journal, first: file.Records.FirstOrDefault(journal.Holds)))
                 .Where(x => x.first is not null)
                 .Select(x => new ManifestChainAnchor { Chain = x.journal.Letter, FirstReceiptIdentification = x.first!.ReceiptIdentification, PreviousSignature = x.first.PreviousSignature ?? "" })
                 .ToList();
 
         /// <summary>
-        /// The schema of <paramref name="subArchive"/>: <c>LNE</c> when its receipts sign a delimited data set (LNE and
-        /// self-certified SCUs), <c>InfoCert</c> when they sign a JWS; null for a sub-archive without receipts. Both write
-        /// the same files and columns (decided 2026-11-06); the schema says how to read <c>Signature</c>.
+        /// The schema of <paramref name="file"/>: <c>LNE</c> when its receipts sign a delimited data set (LNE and
+        /// self-certified SCUs), <c>InfoCert</c> when they sign a JWS. Both write the same files and columns (decided
+        /// 2026-11-06); the schema says how to read <c>Signature</c>.
         /// </summary>
-        public static string? SchemaOf(SubArchive<ArchiveEntry> subArchive)
-            => subArchive.Records.Count == 0 ? null : subArchive.Records[0].Signature.Contains('|') ? "LNE" : "InfoCert";
+        public static string SchemaOf(ArchiveFile<ArchiveEntry> file)
+            => file.FirstRecord.Signature.Contains('|') ? "LNE" : "InfoCert";
+
+        /// <summary>An entry as the manifest names it (<c>firstRecord</c>, <c>lastRecord</c>).</summary>
+        public static ManifestRecord Describe(ArchiveEntry entry)
+            => new ManifestRecord { ReceiptIdentification = entry.ReceiptIdentification, QueueItemId = entry.QueueItemId, ReceiptMoment = entry.ReceiptMoment };
+
+        /// <summary>
+        /// The packager of v2 archive files: every manifest carries <c>schema</c>, <c>chainAnchors</c> and its first and last
+        /// record, whoever signs (contract section 10.2).
+        /// </summary>
+        /// <param name="signerFor">The signer of a file: the SCU whose certificate signed its entries; throws when its key is not available.</param>
+        public static ArchivePackager<ArchiveEntry> CreatePackager(Func<ArchiveFileKey, IArchiveSigner> signerFor, ArchiveV2Context? context = null, CsvOptions? options = null)
+            => new ArchivePackager<ArchiveEntry>(new[] { CreateWriter(options, context) }, signerFor, Describe, ChainAnchorsOf, SchemaOf);
 
         public const string ChargeItemsFileName = "charge-items.csv";
         public const string PayItemsFileName = "pay-items.csv";
@@ -163,9 +176,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         public static ArchiveJournal? JournalOf(int code) => Journals.FirstOrDefault(j => j.Code == code);
 
-        /// <summary>The sub-archive an entry belongs to: its SCU certificate, format version 2 (ADR 0005).</summary>
-        public static SubArchiveKey KeyOf(ArchiveEntry entry)
-            => new SubArchiveKey(string.IsNullOrEmpty(entry.CertificateSerialNumber) ? "unknown" : entry.CertificateSerialNumber!, ArchiveFormatVersion.V2);
+        /// <summary>The archive file an entry belongs to: its SCU certificate, format version 2 (ADR 0019).</summary>
+        public static ArchiveFileKey KeyOf(ArchiveEntry entry)
+            => new ArchiveFileKey(string.IsNullOrEmpty(entry.CertificateSerialNumber) ? "unknown" : entry.CertificateSerialNumber!, ArchiveFormatVersion.V2);
 
         /// <summary>The journal file of one journal, e.g. for a single-journal export.</summary>
         public static ICsvFileDefinition<ArchiveEntry> JournalFile(ArchiveJournal journal)
@@ -207,8 +220,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             return files;
         }
 
-        public static ISubArchiveWriter<ArchiveEntry> CreateWriter(CsvOptions? options = null, ArchiveV2Context? context = null)
-            => new CsvSubArchiveWriter<ArchiveEntry>(ArchiveFormatVersion.V2, Files(context), options);
+        public static IArchiveFileWriter<ArchiveEntry> CreateWriter(CsvOptions? options = null, ArchiveV2Context? context = null)
+            => new CsvArchiveWriter<ArchiveEntry>(ArchiveFormatVersion.V2, Files(context), options);
 
         private static CsvColumn<ArchiveEntry> Col(string name, Func<ArchiveEntry, object?> value, string description) => new CsvColumn<ArchiveEntry>(name, value, description);
 

@@ -177,42 +177,45 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         public void ChainAnchors_HaveOneEntryPerJournalWithRows_WithItsFirstRowAndPreviousSignatureColumn()
         {
             var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft1#T2", "t2", 2, previous: "t1"), Entry("ft1#I1", "i1", 3, receiptCase: 0x4652_2000_0000_1001) };
-            var subArchive = new SubArchive<ArchiveEntry>(ArchiveV2Files.KeyOf(entries[0]), new ArchivePeriod(new DateTime(2026, 1, 1), new DateTime(2027, 1, 1)), entries.Skip(1).ToList(), null, null);
+            var file = ArchiveSplitter.Split(entries.Skip(1).ToList(), e => e.ReceiptMoment, ArchiveV2Files.KeyOf, new ArchivePeriod(new DateTime(2026, 1, 1), new DateTime(2027, 1, 1))).Single();
 
-            var anchors = ArchiveV2Files.ChainAnchorsOf(subArchive);
+            var anchors = ArchiveV2Files.ChainAnchorsOf(file);
 
             anchors.Select(a => a.Chain).Should().Equal("T", "I");
             anchors[0].FirstReceiptIdentification.Should().Be("ft1#T2");
-            anchors[0].PreviousSignature.Should().Be(entries[1].PreviousSignature).And.NotBeEmpty("T2 covers T1, archived before this sub-archive");
+            anchors[0].PreviousSignature.Should().Be(entries[1].PreviousSignature).And.NotBeEmpty("T2 covers T1, archived in an earlier file");
             anchors[1].PreviousSignature.Should().BeEmpty("I1 starts its chain");
         }
 
         [Fact]
-        public async Task Package_WritesEveryV2FileAndVerifies()
+        public async Task Package_WritesEveryV2FileIntoOneStandaloneFileAndVerifies()
         {
             var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft2#T2", "t2", 2, serial: "SERIAL-2", moment: "2026-06-01T10:00:00.0000000Z", previous: "t1") };
-            var archive = ArchiveSplitter.Split(entries, e => e.ReceiptMoment, ArchiveV2Files.KeyOf, new ArchivePeriod(new DateTime(2026, 1, 1), new DateTime(2027, 1, 1))).Single();
+            var files = ArchiveSplitter.Split(entries, e => e.ReceiptMoment, ArchiveV2Files.KeyOf, new ArchivePeriod(new DateTime(2026, 1, 1), new DateTime(2027, 1, 1)));
             using var certificate = TestFixtures.EcdsaCertificate();
             using var output = new MemoryStream();
 
-            await new ArchivePackager<ArchiveEntry>(new[] { ArchiveV2Files.CreateWriter() }, new X509ArchiveSigner(certificate))
-                .WriteAsync(archive, new ArchiveMetadata("12345678901234", DateTime.UtcNow), output);
+            files.Select(f => f.Key.CertificateSerialNumber).Should().Equal(new[] { "SERIAL-1", "SERIAL-2" }, "an SCU switch ends the file (ADR 0019)");
+            await ArchiveV2Files.CreatePackager(_ => new X509ArchiveSigner(certificate)).WriteAsync(files[0], new ArchiveMetadata("12345678901234", DateTime.UtcNow), output);
 
-            output.Position = 0;
-            ArchiveVerifier.Verify(new MemoryStream(output.ToArray())).Errors.Should().BeEmpty();
+            var result = ArchiveVerifier.Verify(new MemoryStream(output.ToArray()));
+            result.Errors.Should().BeEmpty();
+            result.Manifest!.Schema.Should().Be("LNE", "every manifest says how to read Signature, whoever signs");
+            result.Manifest.ChainAnchors.Should().ContainSingle(a => a.Chain == "T");
+            result.Manifest.FirstRecord!.ReceiptIdentification.Should().Be("ft1#T1");
             using var zip = new ZipArchive(new MemoryStream(output.ToArray()));
-            zip.Entries.Select(e => e.Name).Should().Contain(new[] { "subarchive_SERIAL_1_v2_1.zip", "subarchive_SERIAL_2_v2_1.zip" }, "an SCU switch splits the archive (ADR 0005)");
-            using var sub = new ZipArchive(zip.GetEntry("subarchive_SERIAL_1_v2_1.zip")!.Open());
-            sub.Entries.Select(e => e.Name).Should().Contain(ArchiveV2Files.Journals.Select(j => j.FileName)
+            zip.Entries.Select(e => e.Name).Should().Contain(ArchiveV2Files.Journals.Select(j => j.FileName)
                 .Concat(new[]
                 {
                     ArchiveV2Files.ChargeItemsFileName, ArchiveV2Files.PayItemsFileName, ArchiveV2Files.VatSummaryFileName, ArchiveV2Files.SignaturesFileName,
                     ArchiveV2Files.JetFileName, ArchiveV2Files.CaseDataFileName, ArchiveV2Files.ComplianceParametersFileName, ArchiveReadmeFile.ReadmeFileName,
                 }));
-            sub.Entries.Select(e => e.Name).Should().NotContain("journal-types.csv", "the journal names are in the file names and README.txt (decided 2026-11-06)");
-            sub.Entries.Select(e => e.Name).Should().Contain("journal-Z-daily-closing.csv");
-            using var reader = new StreamReader(sub.GetEntry(ArchiveReadmeFile.ReadmeFileName)!.Open(), Encoding.UTF8);
-            (await reader.ReadToEndAsync()).Should().Contain("== 4.1 Colonnes communes à tous les journaux ==").And.Contain("== 4.2 journal-T-ticket.csv ==");
+            zip.Entries.Select(e => e.Name).Should().NotContain("journal-types.csv", "the journal names are in the file names and README.txt (decided 2026-11-06)");
+            zip.Entries.Should().NotContain(e => e.Name.EndsWith(".zip"));
+            using var reader = new StreamReader(zip.GetEntry(ArchiveReadmeFile.ReadmeFileName)!.Open(), Encoding.UTF8);
+            var readme = await reader.ReadToEndAsync();
+            readme.Should().Contain("== 4.1 Colonnes communes à tous les journaux ==").And.Contain("== 4.2 journal-T-ticket.csv ==");
+            readme.Should().Contain("archive_<numéro de série>").And.NotContain("subarchive_").And.NotContain("scu_*.cer");
         }
 
         private const string StoredState = "{\"FR\":{\"Totals\":{\"Totalizer\":4.40,\"CINormal\":0,\"CIDiscounted1\":0,\"CIDiscounted2\":4.40,\"CISuperReduced1\":0,\"CIZero\":0,\"CIUnknown\":0,\"PICash\":4.40,\"PINonCash\":0,\"PIInternal\":0,\"PIUnknown\":0}," +

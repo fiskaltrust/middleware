@@ -3,12 +3,12 @@ using System;
 namespace fiskaltrust.Middleware.Journal.FR.Archive.Model
 {
     /// <summary>
-    /// What a sub-archive is cut on: the serial number of the SCU certificate that signed its entries,
-    /// and its archive format version (ADR 0005). The chains never restart at a switch; the archive splits.
+    /// What an archive file holds one of (ADR 0019): the serial number of the SCU certificate that signed its entries,
+    /// and its archive format version. A change of either ends the file; the chains never restart at a switch.
     /// </summary>
-    public sealed class SubArchiveKey : IEquatable<SubArchiveKey>
+    public sealed class ArchiveFileKey : IEquatable<ArchiveFileKey>
     {
-        public SubArchiveKey(string certificateSerialNumber, ArchiveFormatVersion formatVersion)
+        public ArchiveFileKey(string certificateSerialNumber, ArchiveFormatVersion formatVersion)
         {
             if (string.IsNullOrWhiteSpace(certificateSerialNumber))
             {
@@ -22,12 +22,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Model
 
         public ArchiveFormatVersion FormatVersion { get; }
 
-        public bool Equals(SubArchiveKey? other)
+        public bool Equals(ArchiveFileKey? other)
             => other is not null
                && string.Equals(CertificateSerialNumber, other.CertificateSerialNumber, StringComparison.OrdinalIgnoreCase)
                && FormatVersion.Equals(other.FormatVersion);
 
-        public override bool Equals(object? obj) => Equals(obj as SubArchiveKey);
+        public override bool Equals(object? obj) => Equals(obj as ArchiveFileKey);
 
         public override int GetHashCode()
             => unchecked((StringComparer.OrdinalIgnoreCase.GetHashCode(CertificateSerialNumber) * 397) ^ FormatVersion.GetHashCode());
