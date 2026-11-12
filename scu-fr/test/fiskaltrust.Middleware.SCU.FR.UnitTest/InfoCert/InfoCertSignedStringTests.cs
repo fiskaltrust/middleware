@@ -302,6 +302,57 @@ public class InfoCertSignedStringTests
         Build(request, PreviousSignature).Should().Be($"2000:1850|0550:550,2400,100000,20260301100000,Z42:20260228090000-20260301100000,O,{PreviousSignature}");
     }
 
+    /// <summary>P12c: a monthly closing signs one block per closed period (day, then month), each broken down per VAT rate, 2.1 % on its own.</summary>
+    [Fact]
+    public void MonthlyClosing_SignsOneBlockPerClosedPeriod_PerVatRate()
+    {
+        var request = WithCase(0x2012, "M3");
+        request.ReceiptRequest.cbChargeItems = [];
+        var day = new FRTotals { Totalizer = 12.10m, ByRate = new() { ["20"] = 10.00m, ["2.1"] = 2.10m } };
+        var month = new FRTotals { Totalizer = 112.10m, ByRate = new() { ["20"] = 100.00m, ["5.5"] = 10.00m, ["2.1"] = 2.10m, ["0"] = 0m } };
+        request.PeriodTotals = new FRPeriodTotals
+        {
+            Period = FRTotalsPeriod.Month,
+            Current = month,
+            Perpetual = new FRTotals { Totalizer = 1000.00m },
+            Closed = [new FRPeriodTotal { Period = FRTotalsPeriod.Day, Totals = day }, new FRPeriodTotal { Period = FRTotalsPeriod.Month, Totals = month }],
+        };
+        StateData(request, new() { ["Closing"] = new Dictionary<string, object> { ["Periods"] = new[]
+        {
+            new Dictionary<string, object> { ["Period"] = "Day", ["Start"] = new DateTime(2026, 2, 28, 22, 0, 0, DateTimeKind.Utc) },
+            new Dictionary<string, object> { ["Period"] = "Month", ["Start"] = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc) },
+        } } });
+
+        Build(request, PreviousSignature).Should().Be(
+            "2000:1000|0210:210,1210,100000,20260301100000,M3:20260228220000-20260301100000," +
+            "2000:10000|0550:1000|0210:210,11210,100000,20260301100000,M3:20260201000000-20260301100000," +
+            $"O,{PreviousSignature}");
+    }
+
+    [Fact]
+    public void GrandTotals_OfAMigratedQueue_PutTheUnknownClassLast()
+    {
+        var request = WithCase(0x2011, "Z4");
+        request.PeriodTotals = new FRPeriodTotals { Period = FRTotalsPeriod.Day, Current = new FRTotals { Totalizer = 30m, ByRate = new() { ["UNKN"] = 10m, ["20"] = 20m } } };
+
+        Build(request).Split(',')[0].Should().Be("2000:2000|UNKN:1000");
+    }
+
+    [Fact]
+    public void ArchiveReceipt_SignsThePeriodTotalsPerVatRate()
+    {
+        var request = FRTestData.Archive();
+        request.ReceiptResponse.ftReceiptIdentification = "A3";
+        var boundaries = FRStateDataArchive(request);
+        boundaries.Day = new FRTotals { Totalizer = 12.50m, ByRate = new() { ["10"] = 10.40m, ["2.1"] = 2.10m } };
+        StateData(request, new() { ["Archive"] = boundaries });
+
+        Build(request).Split(',')[9].Should().Be("1000:1040|0210:210");
+    }
+
+    private static FRArchiveBoundaries FRStateDataArchive(ProcessRequest request)
+        => fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers.FRStateData.Archive(request.ReceiptResponse)!;
+
     [Fact]
     public void ArchiveReceipt_SignsTheBoundariesInTagArc()
     {

@@ -181,22 +181,28 @@ internal static class InfoCertSignedString
     /// total, perpetual total, timestamp, period id <c>&lt;ftReceiptIdentification&gt;:&lt;start&gt;-&lt;end&gt;</c>. The
     /// period start is <c>ftStateData.FR.Closing.Periods</c>' start of that period; the end is the receipt's moment.
     /// </summary>
-    /// <remarks>One block, the closing's own period, until several periods' totals reach the SCU (market-fr#221, P08).</remarks>
+    /// <remarks>
+    /// One block per period the closing reports (<see cref="FRPeriodTotals.Reported"/>, as field 21 of the data set): a
+    /// monthly closing signs the day and the month, a yearly closing the day, the month and the year (market-fr#221, P08).
+    /// The breakdown is per VAT rate (P12c).
+    /// </remarks>
     private static string GrandTotals(ProcessRequest request, string? previousSignature)
     {
         var response = request.ReceiptResponse;
         var totals = request.PeriodTotals ?? new FRPeriodTotals();
-        var start = FRStateData.ClosedPeriods(response).FirstOrDefault(x => x.Period == totals.Period)?.Start;
-        var periodId = $"{response.ftReceiptIdentification}:{(start is { } s ? Timestamp(s) : "")}-{Timestamp(response.ftReceiptMoment)}";
-        return Join(
-        [
-            ClassBreakdown(totals.Current),
-            Money(totals.Current.Totalizer),
-            Money(totals.Perpetual.Totalizer),
-            Timestamp(response.ftReceiptMoment),
-            Text(periodId),
-            .. Chain(previousSignature),
-        ]);
+        var starts = FRStateData.ClosedPeriods(response);
+        var fields = new List<string>();
+        foreach (var period in totals.Reported())
+        {
+            var start = starts.FirstOrDefault(x => x.Period == period.Period)?.Start;
+            fields.Add(RateBreakdown(period.Totals));
+            fields.Add(Money(period.Totals.Totalizer));
+            fields.Add(Money(totals.Perpetual.Totalizer));
+            fields.Add(Timestamp(response.ftReceiptMoment));
+            fields.Add(Text($"{response.ftReceiptIdentification}:{(start is { } s ? Timestamp(s) : "")}-{Timestamp(response.ftReceiptMoment)}"));
+        }
+        fields.AddRange(Chain(previousSignature));
+        return Join(fields);
     }
 
     /// <summary>
@@ -225,7 +231,7 @@ internal static class InfoCertSignedString
         {
             fields.AddRange(period is null
                 ? Enumerable.Repeat("", 6)
-                : new[] { ClassBreakdown(period), Money(period.Totalizer), Money(period.PICash), Money(period.PINonCash), Money(period.PIInternal), Money(period.PIUnknown) });
+                : new[] { RateBreakdown(period), Money(period.Totalizer), Money(period.PICash), Money(period.PINonCash), Money(period.PIInternal), Money(period.PIUnknown) });
         }
         fields.AddRange(Chain(previousSignature));
         return Join(fields);
@@ -317,19 +323,31 @@ internal static class InfoCertSignedString
         => [FRChaining.Flag(previousSignature).ToCode(), previousSignature ?? ""];
 
     /// <summary>
-    /// The breakdown of accumulated totals. The queue keeps them by VAT class until it keeps them by rate (market-fr#221,
-    /// P12c): the classes with one French rate are written under it, the others under <c>SRED</c> (other reduced rates) and
-    /// <c>UNKN</c> (unknown). Only non-zero classes.
+    /// The breakdown of accumulated totals per VAT rate (market-fr#221, P12c): <see cref="FRTotals.ByRate"/>, highest rate
+    /// first, each rate on four digits; the v1 unknown class, which has no rate, last under <c>UNKN</c>. Only non-zero
+    /// rates. Totals produced without per-rate amounts are broken down by class, each under its French rate (ReducedS as
+    /// 2.1 %).
     /// </summary>
-    private static string ClassBreakdown(FRTotals totals) => Breakdown(new (string Key, decimal Amount)[]
+    private static string RateBreakdown(FRTotals totals)
     {
-        ("2000", totals.CINormal),
-        ("1000", totals.CIReduced2),
-        ("0550", totals.CIReduced1),
-        ("SRED", totals.CIReducedS),
-        ("0000", totals.CIZero),
-        ("UNKN", totals.CIUnknown),
-    }.Where(x => x.Amount != 0));
+        var byRate = totals.ByRate.Count > 0 ? totals.ByRate : ClassRates(totals);
+        var known = byRate
+            .Where(x => x.Value != 0 && x.Key != FRTotals.UnknownRateKey)
+            .Select(x => (Rate: decimal.Parse(x.Key, NumberStyles.Number, CultureInfo.InvariantCulture), x.Value))
+            .GroupBy(x => Rate(x.Rate))
+            .OrderByDescending(x => x.Key, StringComparer.Ordinal)
+            .Select(x => (x.Key, x.Sum(item => item.Value)));
+        var unknown = byRate.TryGetValue(FRTotals.UnknownRateKey, out var amount) && amount != 0
+            ? new[] { (FRTotals.UnknownRateKey, amount) }
+            : Array.Empty<(string, decimal)>();
+        return Breakdown(known.Concat(unknown));
+    }
+
+    private static Dictionary<string, decimal> ClassRates(FRTotals totals) => new (string Key, decimal Amount)[]
+    {
+        ("20", totals.CINormal), ("10", totals.CIReduced2), ("5.5", totals.CIReduced1), ("2.1", totals.CIReducedS),
+        ("0", totals.CIZero), (FRTotals.UnknownRateKey, totals.CIUnknown),
+    }.Where(x => x.Amount != 0).ToDictionary(x => x.Key, x => x.Amount);
 
     private static string References(cbPreviousReceiptReference? reference)
         => reference is null ? "" : reference.IsSingle ? reference.SingleValue ?? "" : string.Join(";", reference.GroupValue ?? []);
