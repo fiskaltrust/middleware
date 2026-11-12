@@ -7,6 +7,7 @@ using fiskaltrust.Middleware.Journal.FR.Archive.V2;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Validation;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
@@ -46,6 +47,27 @@ public class FRArchiveReceipt
     private readonly AsyncLazy<IMiddlewareReceiptJournalRepository> _receiptJournals;
     private readonly AsyncLazy<IMiddlewareActionJournalRepository> _actionJournals;
 
+    /// <summary>
+    /// What the archive receipt carries that it must not, or null: charge or pay items, or case data on a receipt
+    /// outside training (a training one may name its manager; it archives nothing).
+    /// </summary>
+    internal static string? CarriedContent(ReceiptRequest request)
+    {
+        if (request.cbChargeItems is { Count: > 0 })
+        {
+            return "charge items";
+        }
+        if (request.cbPayItems is { Count: > 0 })
+        {
+            return "pay items";
+        }
+        if (!request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training) && !FRCaseData.IsEmpty(request.ftReceiptCaseData))
+        {
+            return "ftReceiptCaseData";
+        }
+        return null;
+    }
+
     public FRArchiveReceipt(FRSigningPipeline pipeline, FRChainStateProvider chains, AsyncLazy<IMiddlewareQueueItemRepository> queueItems,
         AsyncLazy<IMiddlewareReceiptJournalRepository> receiptJournals, AsyncLazy<IMiddlewareActionJournalRepository> actionJournals)
     {
@@ -58,6 +80,14 @@ public class FRArchiveReceipt
 
     public async Task<ProcessCommandResponse?> SignAsync(ProcessCommandRequest request)
     {
+        // Contract §1.4, defence in depth behind the FR validation (whose exceptions the shared receipt processor logs
+        // and passes over): nothing from the items or the case data reaches what an archive receipt signs or archives.
+        if (CarriedContent(request.ReceiptRequest) is { } carried)
+        {
+            request.ReceiptResponse.SetReceiptResponseError($"An archive receipt (0x3011) must not carry {carried}.");
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         // Defensive, as v1.3 ArchiveCommand: the numerator only moves after the initial-operation receipt, so on an
         // active queue this never fires; v1.2 ArchiveRequest has no such guard.
         if (request.queue.ftReceiptNumerator == 0)

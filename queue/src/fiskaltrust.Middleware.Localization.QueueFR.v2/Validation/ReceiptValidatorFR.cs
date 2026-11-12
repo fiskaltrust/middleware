@@ -26,6 +26,9 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
     /// <summary>The <c>CertificationBody</c> the LNE SCU reports.</summary>
     public const string LneBody = "LNE";
 
+    /// <summary>0x3011 (Archive receipt / archive all data receipt), not yet a member of the interface enum.</summary>
+    internal const ReceiptCase ArchiveReceiptCase = (ReceiptCase) 0x3011;
+
     /// <param name="certificationBody">
     /// The body that certified the queue's SCU, as it reports it (<c>Infocert</c>, <c>LNE</c>, ...): the référentiel
     /// rules of that body apply on top of the common ones (market-fr#140). Null applies the common rules only.
@@ -77,10 +80,19 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
             .WithMessage(request => $"The receipt case 0x{(long) request.ftReceiptCase.Case():X4} must not have pay items.")
             .WithErrorCode("PayItemsNotAllowed");
 
-        // Contract §1.2 ManagerId (D4): a training receipt names the person responsible for the operator.
+        // Contract §1.4: the archive receipt is triggered by its receipt case alone; nothing from the case data
+        // reaches what it signs or archives (market-fr#221). A training one archives nothing.
+        RuleFor(x => x.ftReceiptCaseData)
+            .Must(FRCaseData.IsEmpty)
+            .When(x => x.ftReceiptCase.Case() == ArchiveReceiptCase && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
+            .WithMessage("An archive receipt (0x3011) must not carry ftReceiptCaseData.")
+            .WithErrorCode("CaseDataNotAllowed");
+
+        // Contract §1.2 ManagerId (D4): a training receipt names the person responsible for the operator. Not a
+        // training archive receipt, which archives nothing and carries no case data (market-fr#221).
         RuleFor(x => x.ftReceiptCaseData)
             .Must(caseData => !string.IsNullOrWhiteSpace(FRCaseData.ManagerId(caseData)))
-            .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
+            .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training) && x.ftReceiptCase.Case() != ArchiveReceiptCase)
             .WithMessage("A training receipt must name the person responsible for the operator in ftReceiptCaseData.FR.ManagerId.")
             .WithErrorCode("TrainingRequiresManagerId");
 
