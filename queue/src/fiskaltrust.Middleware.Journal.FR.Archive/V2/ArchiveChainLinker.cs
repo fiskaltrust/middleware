@@ -25,11 +25,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             }
             else
             {
-                // No previous entry seen: the start of the chain when the counter is 1. Otherwise the
-                // previous entry lies outside what was fed (a v1 entry of a half-migrated queue, ADR 0003),
-                // and the column stays empty rather than guessed.
+                // No previous entry seen: the start of the chain when the counter is 1, or when the SCU
+                // signed that the entry carries over no previous signature (the first v2 entry after a
+                // half migration whose v1 signature was not readable, ADR 0003). Otherwise the previous
+                // entry lies outside what was fed, and the column stays empty rather than guessed.
                 entry.PreviousSignature = null;
-                entry.StartOfChain = entry.ChainCounter == 1;
+                entry.StartOfChain = entry.ChainCounter == 1 || entry.SignedStartOfChain == true;
             }
             _last[entry.Chain] = (entry.ChainCounter, entry.ChainedSignature);
         }

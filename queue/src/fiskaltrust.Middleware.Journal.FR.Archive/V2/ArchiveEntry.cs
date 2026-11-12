@@ -45,6 +45,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             ReceiptCase = Long(request, "ftReceiptCase") ?? 0;
             State = Long(response, "ftState") ?? 0;
             CertificateSerialNumber = SignedCertificateSerialNumber(signature);
+            SignedStartOfChain = SignedStartOfChainFlag(signature);
             Siret = SignatureData(response, SiretType);
         }
 
@@ -104,6 +105,13 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         public string ChainedSignature => Signature.Substring(Signature.LastIndexOf('.') + 1);
 
         public string? CertificateSerialNumber { get; }
+
+        /// <summary>
+        /// The start-of-chain flag the SCU signed (ADR 0001): true when the entry carries over no previous
+        /// signature, e.g. the first v2 entry of a chain after a half migration whose v1 signature was not
+        /// readable (ADR 0003). Null when the signed content cannot be read.
+        /// </summary>
+        public bool? SignedStartOfChain { get; }
 
         public string? Siret { get; }
 
@@ -232,6 +240,34 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// data set, <c>csn</c> of an InfoCert JWS payload. Null when the QR code carries none.
         /// </summary>
         public static string? CertificateSerialNumberOf(string qrCode) => SignedCertificateSerialNumber(qrCode);
+
+        /// <summary>The signed start-of-chain flag: the data set's second field from the end, or the JWS payload's <c>previousSignatureCarriedOver</c>; <c>N</c> means no previous signature.</summary>
+        private static bool? SignedStartOfChainFlag(string qrCode)
+        {
+            var content = SignedContent(qrCode);
+            if (IsDataSet(content))
+            {
+                var fields = content.Split('|');
+                return fields.Length >= 2 ? fields[fields.Length - 2] == "N" : (bool?) null;
+            }
+            var segments = content.Split('.');
+            if (segments.Length != 2)
+            {
+                return null;
+            }
+            try
+            {
+                var payload = segments[1].Replace('-', '+').Replace('_', '/');
+                payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+                using var json = JsonDocument.Parse(Convert.FromBase64String(payload));
+                var flag = json.RootElement.ValueKind == JsonValueKind.Object ? String(json.RootElement, "previousSignatureCarriedOver") : null;
+                return flag is null ? (bool?) null : flag == "N";
+            }
+            catch (Exception ex) when (ex is FormatException || ex is JsonException)
+            {
+                return null;
+            }
+        }
 
         private static string? SignedCertificateSerialNumber(string qrCode)
         {
