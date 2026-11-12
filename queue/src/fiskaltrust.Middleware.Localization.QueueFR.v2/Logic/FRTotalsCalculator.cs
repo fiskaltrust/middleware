@@ -18,10 +18,15 @@ public static class FRTotalsCalculator
     /// that settles it. Counting them would raise the turnover when the acompte is taken and again
     /// when the sale is invoiced in full (NF525 V2.3 §6.18.1.3 as the Infocert auditor applied it,
     /// fiskaltrust/market-fr#135).
+    /// <para>
+    /// A multipurpose voucher sold (a not-taxable, V=8, voucher, S=4, charge item) is kept out of the turnover too: it
+    /// is a treasury operation, and the sale it pays for counts when the voucher is redeemed (NF525 V2.3 §6.18.1.3,
+    /// market-fr#221). A single-purpose voucher is taxed when sold and stays in.
+    /// </para>
     /// </remarks>
     public static FRTotals From(ReceiptRequest request)
     {
-        var chargeItems = (request.cbChargeItems ?? new List<ChargeItem>()).Where(x => !IsDownpayment(x)).ToList();
+        var chargeItems = (request.cbChargeItems ?? new List<ChargeItem>()).Where(x => !IsDownpayment(x) && !IsMultipurposeVoucher(x)).ToList();
         var payItems = (request.cbPayItems ?? new List<PayItem>()).Where(x => !IsDownpayment(x)).ToList();
 
         decimal ChargeSum(FRVatBucket bucket) => chargeItems.Where(x => FRTotalsBuckets.Of(x) == bucket).Sum(x => x.Amount);
@@ -76,4 +81,8 @@ public static class FRTotalsCalculator
     private static bool IsDownpayment(ChargeItem item) => ((long) item.ftChargeItemCase & (long) ChargeItemCaseFlags.Downpayment) != 0;
 
     private static bool IsDownpayment(PayItem item) => ((long) item.ftPayItemCase & (long) PayItemCaseFlags.Downpayment) != 0;
+
+    /// <summary>A multipurpose voucher sold: a voucher (S=4) charge item that is not taxable (V=8). A taxed voucher is single-purpose.</summary>
+    public static bool IsMultipurposeVoucher(ChargeItem item)
+        => item.ftChargeItemCase.TypeOfService() == ChargeItemCaseTypeOfService.Voucher && item.ftChargeItemCase.Vat() == ChargeItemCase.NotTaxable;
 }

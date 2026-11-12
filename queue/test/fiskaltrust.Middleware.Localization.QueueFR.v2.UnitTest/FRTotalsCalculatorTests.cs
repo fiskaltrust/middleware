@@ -34,9 +34,8 @@ public class FRTotalsCalculatorTests
         { 0x4652_2000_0000_0008, 0m, nameof(FRTotals.CIZero) },
         // The rate of a known class never moves it (no v1.2 reverse-charge quirk).
         { 0x4652_2000_0000_0007, 20m, nameof(FRTotals.CIZero) },
-        // Multi-use voucher sent as a charge item (type of service 4, not taxable): Zero and the
-        // Totalizer, not the v1.2 Unknown of v0 0x21.
-        { 0x4652_2000_0000_0048, 0m, nameof(FRTotals.CIZero) },
+        // A single-purpose voucher (type of service 4) is taxed when sold: in its VAT bucket and the Totalizer.
+        { 0x4652_2000_0000_0043, 20m, nameof(FRTotals.CINormal) },
         // No such VAT class.
         { 0x4652_2000_0000_000F, 0m, nameof(FRTotals.CIUnknown) },
     };
@@ -63,6 +62,33 @@ public class FRTotalsCalculatorTests
         { 0x4652_2000_0040_0001, nameof(FRTotals.PIUnknown) },
         { 0x4652_2000_0000_00FF, nameof(FRTotals.PIUnknown) },
     };
+
+    // NF525 V2.3 §6.18.1.3, market-fr#221: a multipurpose voucher sold (S=4, not taxable) is a treasury operation.
+    [Fact]
+    public void AMultipurposeVoucherSold_StaysOutOfTheTurnover()
+    {
+        var totals = FRTotalsCalculator.From(new ReceiptRequest
+        {
+            cbChargeItems =
+            [
+                new ChargeItem { Amount = 50m, VATRate = 0m, ftChargeItemCase = (ChargeItemCase) 0x4652_2000_0000_0048 },
+                new ChargeItem { Amount = 10m, VATRate = 20m, ftChargeItemCase = (ChargeItemCase) 0x4652_2000_0000_0003 },
+            ],
+            cbPayItems = [],
+        });
+
+        totals.Totalizer.Should().Be(10m);
+        totals.CIZero.Should().Be(0m);
+        totals.CINormal.Should().Be(10m);
+    }
+
+    [Theory]
+    [InlineData(0x4652_2000_0000_0048, true)]
+    [InlineData(0x4652_2000_0000_0043, false)]
+    [InlineData(0x4652_2000_0000_0008, false)]
+    [InlineData(0x4652_2000_0000_0098, false)]
+    public void MultipurposeVouchers_AreTheNotTaxableVouchers(long chargeItemCase, bool multipurpose)
+        => FRTotalsCalculator.IsMultipurposeVoucher(new ChargeItem { ftChargeItemCase = (ChargeItemCase) chargeItemCase }).Should().Be(multipurpose);
 
     [Theory]
     [MemberData(nameof(VatCases))]
