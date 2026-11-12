@@ -86,6 +86,8 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         // The QR code is the compact JWS; the certificate serial is its header's kid.
         response.AddReceiptQrCode(jws);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
+        // market-fr#221 (decisions 32, 35): the seller's identity for the header of a document, not signed.
+        response.AddIssuerItem(receiptRequest, _configuration.Issuer());
         // market-fr#131: the NF525 mention (NF525 V2.3 §6.1.6.1) is the whole line, so the caption
         // stays empty. It is left out rather than emitted incomplete. A sandbox is not certified, so
         // "en cours de certif." stands where the attestation number goes.

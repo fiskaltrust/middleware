@@ -31,6 +31,13 @@ public enum SignatureTypeFR : long
     /// (market-fr#231, #208). Printing it is optional.
     /// </summary>
     JetEvent = 0x4652_2000_0000_0012,
+
+    /// <summary>
+    /// The seller's identity the SCU prints after the receipt header, one <c>Label : value</c> line per configured value,
+    /// not signed (market-fr#221). Allocated here too so the queue never reuses it; the archive reads the issuer columns
+    /// of chains T, B, P and I from it.
+    /// </summary>
+    Issuer = 0x4652_2000_0000_0013,
 }
 
 public static class SignatureTypeFRExt

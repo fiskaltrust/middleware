@@ -25,6 +25,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         private const long CountryFR = 0x4652_0000_0000_0000;
         private const long ReceiptSignatureType = 0x0001;
         private const long SiretType = 0x0009;
+        private const long IssuerType = 0x0013;
         private const long TrainingFlag = 0x0000_0000_0002_0000;
 
         private readonly ArchiveEntryContent? _content;
@@ -144,6 +145,24 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// signature it was chained on (ADR 0003).
         /// </summary>
         public string? PreviousSignature => Content.Links.PreviousSignature;
+
+        /// <summary>
+        /// A value of the issuer item the SCU printed (signature type 0x0013, market-fr#221): its <c>Label : value</c> line
+        /// for <paramref name="label"/>, e.g. <c>Capital social</c>; null when the entry has no such item or line. Not signed.
+        /// </summary>
+        public string? IssuerValue(string label)
+        {
+            foreach (var line in (SignatureData(Content.Response, IssuerType) ?? "").Split('\n'))
+            {
+                var at = line.IndexOf(" : ", StringComparison.Ordinal);
+                if (at > 0 && line.Substring(0, at) == label)
+                {
+                    var value = line.Substring(at + 3);
+                    return value.Length == 0 ? null : value;
+                }
+            }
+            return null;
+        }
 
         /// <summary>The issuer claims the SCU signed (archive-v2 §1.1), read from the signed content.</summary>
         public IssuerClaims Issuer => Content.Links.Issuer;

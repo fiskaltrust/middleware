@@ -63,6 +63,37 @@ public class InfoCertConfiguration
     /// </summary>
     public string? ElectronicAddress { get; set; }
 
+    // market-fr#221 (decision 35): the rest of the seller's identity the receipt header shows (R13 ENC-TIK-SOC-*,
+    // R12 SOC-*), printed by the issuer item and not signed. Optional; a value not configured has no line.
+
+    /// <summary>Issuer: company name (ENC-TIK-SOC-ETS, SOC-RSO).</summary>
+    public string? IssuerName { get; set; }
+
+    /// <summary>Issuer: what the name is, e.g. "Raison sociale" or "Enseigne" (ENC-TIK-SOC-ID).</summary>
+    public string? IssuerNameType { get; set; }
+
+    /// <summary>Issuer: street address (ENC-TIK-SOC-ADR, SOC-ADR).</summary>
+    public string? IssuerAddress { get; set; }
+
+    /// <summary>Issuer: postcode (ENC-TIK-SOC-CCP).</summary>
+    public string? IssuerPostalCode { get; set; }
+
+    /// <summary>Issuer: city (ENC-TIK-SOC-VIL).</summary>
+    public string? IssuerCity { get; set; }
+
+    /// <summary>Issuer: country (ENC-TIK-SOC-PAY).</summary>
+    public string? IssuerCountry { get; set; }
+
+    /// <summary>Issuer: intra-EU VAT number (ENC-TIK-SOC-TVA, SOC-TVA-NUM); not the VAT option.</summary>
+    public string? IssuerVatNumber { get; set; }
+
+    /// <summary>Issuer: share capital (SOC-CAPITAL), e.g. "500000 EUR".</summary>
+    public string? ShareCapital { get; set; }
+
+    /// <summary>The seller's identity the issuer item prints.</summary>
+    public FRIssuer Issuer() => new(Siret, IssuerName, IssuerNameType, IssuerAddress, IssuerPostalCode, IssuerCity, IssuerCountry,
+        IssuerVatNumber, Rcs, Naf, LegalForm, ShareCapital, VatOption);
+
     /// <summary>
     /// True in a sandbox (the Launcher's <c>sandbox</c> key). The NF525 mention then reads
     /// "en cours de certif." instead of the attestation number (<see cref="FRSandbox"/>).
