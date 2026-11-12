@@ -40,6 +40,10 @@ public class ScuRobustnessTests
             ["PrivateKey"] = "aa",
             ["CertificateSerialNumber"] = "CERT-4711",
             ["LneCertificateNumber"] = "LNE-2026-042",
+            // What the InfoCert SCU requires outside a sandbox (the NF525 mention); the other SCUs ignore them.
+            ["SoftwareCategory"] = "B",
+            ["AttestationNumber"] = "0546",
+            ["SoftwareVersion"] = "06.07",
         };
         change?.Invoke(configuration);
         return configuration;

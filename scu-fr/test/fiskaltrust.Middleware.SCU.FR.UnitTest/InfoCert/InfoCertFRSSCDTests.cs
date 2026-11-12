@@ -326,7 +326,7 @@ public class InfoCertFRSSCDTests
     [InlineData(null, false)]
     public void FromConfiguration_ReadsTheLauncherSandboxKey(object? sandbox, bool expected)
     {
-        var configuration = new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa" };
+        var configuration = new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["SoftwareCategory"] = "B", ["AttestationNumber"] = "0546", ["SoftwareVersion"] = "06.07" };
         if (sandbox is not null)
         {
             configuration["sandbox"] = sandbox;
@@ -368,6 +368,29 @@ public class InfoCertFRSSCDTests
         var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
         response.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody));
+    }
+
+    /// <summary>NF525 V2.3 §6.1.6.1: outside a sandbox the InfoCert SCU refuses to start without what the mention prints.</summary>
+    [Theory]
+    [InlineData("SoftwareCategory")]
+    [InlineData("AttestationNumber")]
+    [InlineData("SoftwareVersion")]
+    public void FromConfiguration_OutsideASandbox_WithoutAMentionField_IsRejected(string key)
+    {
+        var configuration = new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["SoftwareCategory"] = "B", ["AttestationNumber"] = "0546", ["SoftwareVersion"] = "06.07" };
+        configuration.Remove(key);
+
+        var act = () => InfoCertConfiguration.FromConfiguration(configuration);
+
+        act.Should().Throw<FRValidationException>().WithMessage($"*{key}*");
+    }
+
+    [Fact]
+    public void FromConfiguration_InASandbox_StartsWithoutTheMentionFields()
+    {
+        var configuration = new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["sandbox"] = true };
+
+        InfoCertConfiguration.FromConfiguration(configuration).Sandbox.Should().BeTrue();
     }
 
     [Fact]
