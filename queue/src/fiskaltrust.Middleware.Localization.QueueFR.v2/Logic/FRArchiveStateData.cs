@@ -34,7 +34,6 @@ public static class FRArchiveStateData
         {
             stateData.FR.DocumentType = DocumentTypeOf(request);
             stateData.FR.OperationType = OperationTypeOf(request);
-            stateData.FR.CustomerEndpointId = chain == FRReceiptChain.Invoice ? FRCustomerEndpoint.Infer(request) : null;
         }
         if (lines is not null)
         {

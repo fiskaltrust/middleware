@@ -54,7 +54,6 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         Naf = _configuration.Naf,
         LegalForm = _configuration.LegalForm,
         VatOption = _configuration.VatOption,
-        ElectronicAddress = _configuration.ElectronicAddress,
         SignatureCreationDataAvailable = true,
     }.ToFRSSCDInfo());
 

@@ -133,14 +133,6 @@ public class MiddlewareStateDataFR
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? LineCount { get; set; }
 
-    /// <summary>
-    /// On an invoice to a French business buyer that sent no <c>CustomerEndpointId</c>: <c>0225:&lt;SIREN&gt;</c>, the SIREN
-    /// being the first nine digits of its <c>CustomerTaxId</c> (archive-v2 §1.2 <i>Customer</i>, market-fr#140, BR-FR-12).
-    /// </summary>
-    [JsonPropertyName("CustomerEndpointId")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? CustomerEndpointId { get; set; }
-
     /// <summary>The computed values of each charge item, in request order (archive-v2 §2, D7).</summary>
     [JsonPropertyName("ChargeItems")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -145,6 +145,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// <summary>The issuer claims the SCU signed (archive-v2 §1.1), read from the signed content.</summary>
         public IssuerClaims Issuer => Content.Links.Issuer;
 
+        /// <summary>True when the InfoCert SCU signed the entry: its signed content is a JWS, not a data set.</summary>
+        public bool SignedByInfoCert => Content.Links.Jws;
+
         /// <summary>True on the first entry of a chain, which carries no previous signature: the signed flag <c>N</c> (ADR 0001).</summary>
         public bool StartOfChain { get; }
 

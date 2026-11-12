@@ -230,8 +230,11 @@ public class LneFRSSCDTests
 
         var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
-        // market-fr#141: fixed positions right after the SIRET.
-        DataSetOf(response).Split('|')[..6].Should().Equal(FRTestData.Siret, "RCS Nanterre B 642036065", "4711D", "SAS, au capital de 500000 EUR", "debits", "123456789_POS");
+        // market-fr#141: fixed positions right after the SIRET. Field 6, formerly the electronic address
+        // BT-34, stays reserved and empty even when configured (market-fr#221).
+        var fields = DataSetOf(response).Split('|');
+        fields.Should().HaveCount(25);
+        fields[..6].Should().Equal(FRTestData.Siret, "RCS Nanterre B 642036065", "4711D", "SAS, au capital de 500000 EUR", "debits", "");
     }
 
     [Fact]

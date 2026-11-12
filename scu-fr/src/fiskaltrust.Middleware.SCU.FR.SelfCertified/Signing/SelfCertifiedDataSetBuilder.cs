@@ -45,7 +45,10 @@ internal static class SelfCertifiedDataSetBuilder
             configuration.Naf ?? "",
             configuration.LegalForm ?? "",
             configuration.VatOption ?? "",
-            configuration.ElectronicAddress ?? "",
+            // market-fr#221: field 6 is reserved and always empty. It was the seller's electronic
+            // address (BT-34), which is eInvoicing data and stays out of the signed content; it is kept so
+            // nothing after it is renumbered.
+            "",
             response.ftQueueID.ToString(),
             response.ftQueueItemID.ToString(),
             // market-fr#225: the stored request's hash, as the queue computed it; empty without one.

@@ -45,7 +45,11 @@ public class LneConfiguration
     /// <summary>Issuer claim: <c>debits</c> or <c>receipts</c> (SOC-REF-REGTVA, BT-8).</summary>
     public string? VatOption { get; set; }
 
-    /// <summary>Issuer claim: electronic address, <c>SIREN</c> or <c>SIREN_XXX</c> under scheme 0225 (BT-34).</summary>
+    /// <summary>
+    /// No longer used (market-fr#221): the seller's electronic address (BT-34) is eInvoicing data and is
+    /// neither signed nor reported. Still read so that a configuration carrying it starts; the SCU logs once that it
+    /// is ignored.
+    /// </summary>
     public string? ElectronicAddress { get; set; }
 
     /// <summary>
@@ -89,7 +93,6 @@ public class LneConfiguration
         FRIssuerClaims.RejectCharacter("LNE", nameof(Rcs), result.Rcs, Signing.LneDataSetBuilder.FieldSeparator);
         FRIssuerClaims.RejectCharacter("LNE", nameof(Naf), result.Naf, Signing.LneDataSetBuilder.FieldSeparator);
         FRIssuerClaims.RejectCharacter("LNE", nameof(LegalForm), result.LegalForm, Signing.LneDataSetBuilder.FieldSeparator);
-        FRIssuerClaims.RejectCharacter("LNE", nameof(ElectronicAddress), result.ElectronicAddress, Signing.LneDataSetBuilder.FieldSeparator);
 
         return result;
     }

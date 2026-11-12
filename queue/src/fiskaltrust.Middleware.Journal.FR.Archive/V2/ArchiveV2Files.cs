@@ -266,7 +266,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             Col("Naf", e => e.Issuer.Naf, "Code NAF (APE) de l'émetteur, signé tel que configuré ; vide s'il n'est pas configuré."),
             Col("LegalForm", e => e.Issuer.LegalForm, "Forme juridique et capital social de l'émetteur, signés tels que configurés ; vide s'ils ne sont pas configurés."),
             Col("VatOption", e => e.Issuer.VatOption, "Option de TVA de l'émetteur : debits (sur les débits) ou receipts (sur les encaissements), signée ; vide si elle n'est pas configurée."),
-            Col("ElectronicAddress", e => e.Issuer.ElectronicAddress, "Adresse électronique de facturation de l'émetteur (SIREN ou SIREN_XXX, schéma 0225), signée ; vide si elle n'est pas configurée."),
+            Col("ElectronicAddress", SellerElectronicAddress, "Adresse électronique de l'émetteur (BT-34), telle que le système de caisse l'envoie (ftReceiptCaseData FR.SellerElectronicAddress, son schéma dans case-data.csv) ; non signée, renseignée uniquement sur les factures (chaîne I) d'un module InfoCert, vide ailleurs."),
             Col("CertificateSerialNumber", e => e.CertificateSerialNumber, "Numéro de série du certificat qui a signé le document."),
             Col("SoftwareVersion", e => SoftwareVersion(e.ProcessingVersion), "Version du logiciel fiskaltrust qui a traité le document, sous la forme majeure.mineure.correctif."),
             Col("Training", e => e.Training, "true si le document est émis en mode école (formation) ; sans valeur fiscale."),
@@ -320,7 +320,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             Col("CustomerCountry", e => Customer(e, "CustomerCountry"), "Pays du client (code ISO 3166-1 alpha-2)."),
             Col("CustomerVATId", e => Customer(e, "CustomerVATId"), "Numéro de TVA intracommunautaire du client professionnel ; vide pour un particulier."),
             Col("CustomerTaxId", e => Customer(e, "CustomerTaxId"), "Identifiant fiscal du client ; pour une entreprise française, son SIREN (9 chiffres) ou son SIRET (14 chiffres)."),
-            Col("CustomerEndpointId", e => Customer(e, "CustomerEndpointId") ?? StateText(e, "CustomerEndpointId"), "Adresse électronique du client (schéma:identifiant) ; pour une entreprise française qui n'en envoie pas, 0225:<SIREN> déduit à la signature."),
+            Col("CustomerEndpointId", e => Customer(e, "CustomerEndpointId"), "Adresse électronique du client (BT-49, schéma:identifiant), telle que le système de caisse l'envoie ; jamais déduite."),
             Col("CustomerReference", e => Customer(e, "CustomerReference"), "Référence de l'acheteur (BT-10)."),
         };
 
@@ -498,6 +498,14 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 : (bool?) null;
 
         private static string? StateText(ArchiveEntry entry, string name) => entry.StateFR is { } fr ? ArchiveEntry.Text(fr, name) : null;
+
+        /// <summary>
+        /// The seller's electronic address (BT-34) as the POS sent it, on InfoCert invoices only: eInvoicing data, archived
+        /// unsigned as R12 lists it (conditional), never read from the signed content or the configuration (market-fr#221)
+        ///.
+        /// </summary>
+        private static object? SellerElectronicAddress(ArchiveEntry entry)
+            => entry.Chain == "I" && entry.SignedByInfoCert ? ReceiptCaseDataFR(entry.Request, "SellerElectronicAddress") : null;
 
         private static string? Customer(ArchiveEntry entry, string name)
             => ArchiveEntry.Property(entry.Request, "cbCustomer") is { ValueKind: JsonValueKind.Object } customer ? ArchiveEntry.Text(customer, name) : null;

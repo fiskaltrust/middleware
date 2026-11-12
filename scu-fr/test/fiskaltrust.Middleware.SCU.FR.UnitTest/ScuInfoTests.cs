@@ -36,10 +36,12 @@ public class ScuInfoTests
             info.GetProperty("Naf").GetString().Should().Be("62.01Z");
             info.GetProperty("LegalForm").GetString().Should().Be("SAS");
             info.GetProperty("VatOption").GetString().Should().Be("debits");
-            info.GetProperty("ElectronicAddress").GetString().Should().Be("123456789");
             info.TryGetProperty("PrivateKey", out var _).Should().BeFalse();
         }
 
+        // market-fr#221: BT-34 is no longer reported by LNE and self-certified (ElectronicAddressTests);
+        // the InfoCert SCU still reports it until its payload drops it (P12a).
+        (await InfoData(scus[2])).GetProperty("ElectronicAddress").GetString().Should().Be("123456789");
         (await InfoData(scus[2])).GetProperty("SoftwareCategory").GetString().Should().Be("B");
     }
 }

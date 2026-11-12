@@ -29,7 +29,6 @@ public class SelfCertifiedScuInfo
 
     public string? VatOption { get; set; }
 
-    public string? ElectronicAddress { get; set; }
 
     /// <summary>True once the configured key material was loaded successfully.</summary>
     public bool SignatureCreationDataAvailable { get; set; }

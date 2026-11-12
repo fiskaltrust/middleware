@@ -31,8 +31,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         // FRCanonicalRequest.SignedField: the canonical-form version, a colon, the padded Base64 SHA-256 (ADR 0013).
         private static readonly Regex SignedRequestHashField = new Regex("^[0-9]+:[A-Za-z0-9+/]{43}=$", RegexOptions.CultureInvariant);
 
-        private SignedLinks(long chainCounter, string flag, string? previousSignature, string? siret, string? certificateSerialNumber, string? requestHash, IssuerClaims? issuer = null)
+        private SignedLinks(long chainCounter, string flag, string? previousSignature, string? siret, string? certificateSerialNumber, string? requestHash, IssuerClaims? issuer = null, bool jws = false)
         {
+            Jws = jws;
             Issuer = issuer ?? IssuerClaims.None;
             if (flag != "O" && flag != "N")
             {
@@ -52,6 +53,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             RequestHash = string.IsNullOrEmpty(requestHash) ? null : requestHash;
         }
 
+        /// <summary>True when the signed content is a JWS (the InfoCert SCU), false for a data set.</summary>
+        public bool Jws { get; }
+
         public long ChainCounter { get; }
 
         public bool StartOfChain { get; }
@@ -68,6 +72,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// <summary>
         /// The issuer claims the SCU signed as configured (archive-v2 §1.1, fiskaltrust/middleware#827): LNE data-set fields 2 to 6,
         /// InfoCert payload keys <c>rcs</c>, <c>naf</c>, <c>legalform</c>, <c>vatoption</c>, <c>elecaddress</c>. Empty when not signed.
+    /// The LNE data set's field 6 is reserved and empty since market-fr#221 (it was BT-34); entries signed
+    /// before still read it here. The archive's <c>ElectronicAddress</c> column no longer uses it.
         /// </summary>
         public IssuerClaims Issuer { get; }
 
@@ -140,7 +146,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 var flag = ArchiveEntry.String(root, "previousSignatureCarriedOver") ?? throw new FormatException("the JWS payload has no previousSignatureCarriedOver");
                 var issuer = new IssuerClaims(ArchiveEntry.String(root, "rcs"), ArchiveEntry.String(root, "naf"), ArchiveEntry.String(root, "legalform"),
                     ArchiveEntry.String(root, "vatoption"), ArchiveEntry.String(root, "elecaddress"));
-                return new SignedLinks(counter, flag, ArchiveEntry.String(root, "previousSignature"), ArchiveEntry.String(root, "siret"), ArchiveEntry.String(root, "csn"), null, issuer);
+                return new SignedLinks(counter, flag, ArchiveEntry.String(root, "previousSignature"), ArchiveEntry.String(root, "siret"), ArchiveEntry.String(root, "csn"), null, issuer, jws: true);
             }
         }
     }
