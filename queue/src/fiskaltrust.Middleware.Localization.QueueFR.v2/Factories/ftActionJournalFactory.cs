@@ -42,6 +42,19 @@ public static class ftActionJournalFactory
         return CreateActionJournal(receiptResponse.ftQueueID, $"{request.ftReceiptCase:X}-{nameof(DeactivateQueueFR)}", receiptResponse.ftQueueItemID, $"Out-of-Operation receipt. Queue-ID: {receiptResponse.ftQueueID}", JsonConvert.SerializeObject(notification));
     }
 
+    /// <summary>
+    /// A file cut at the one-year limit without an archive receipt (market-fr ADR 0018). The portal
+    /// builds that fixed file from the first and last record named here.
+    /// </summary>
+    public static ftActionJournal CreateForcedArchiveActionJournal(ReceiptRequest request, ReceiptResponse receiptResponse, Logic.FROpenArchiveFile.ForcedFile file)
+        => CreateActionJournal(receiptResponse.ftQueueID, $"{request.ftReceiptCase:X}-ForcedArchive", receiptResponse.ftQueueItemID,
+            $"The archive file from queue item {file.First.ftQueueItemId} to {file.Last.ftQueueItemId} reached the one-year limit: it is archived without an archive receipt.",
+            JsonConvert.SerializeObject(new
+            {
+                First = new { file.First.ftQueueItemId, ftReceiptMoment = file.First.ftReceiptMoment.ToUniversalTime().ToString("O") },
+                Last = new { file.Last.ftQueueItemId, ftReceiptMoment = file.Last.ftReceiptMoment.ToUniversalTime().ToString("O") },
+            }));
+
     public static ftActionJournal CreateLateSigningStartedActionJournal(ReceiptRequest request, ReceiptResponse receiptResponse)
         => CreateActionJournal(receiptResponse.ftQueueID, $"{request.ftReceiptCase:X}-LateSigningStarted", receiptResponse.ftQueueItemID,
             $"QueueItem {receiptResponse.ftQueueItemID} ({receiptResponse.ftReceiptIdentification}) opened the late-signing mode.",

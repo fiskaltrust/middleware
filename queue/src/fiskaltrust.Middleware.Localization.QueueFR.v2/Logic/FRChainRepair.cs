@@ -113,6 +113,10 @@ public static class FRChainRepair
             lateSigning.Close();
         }
 
+        // The open archive file follows the entry; a forced archive the lost entry recorded is not
+        // recorded again (its action journal belonged to the entry's own store).
+        new FROpenArchiveFile(queueFR).Add(request, response, FRArchiveDue.CertificateSerialNumberOf(response));
+
         // A zero receipt that still answered "message pending" did not hand the messages over.
         var pending = new FRPendingMessagesState(queueFR);
         if (zeroReceipt && pending.AnyPending && !response.ftState.IsFlag(StateFlags.MessageIsPending))

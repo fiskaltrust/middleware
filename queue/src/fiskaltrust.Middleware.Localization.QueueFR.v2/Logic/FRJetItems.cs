@@ -13,6 +13,9 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 /// </summary>
 public static class FRJetItems
 {
+    public const int PeriodArchive = 20;
+    public const string PeriodArchiveLabel = "Archivage fiscal de période";
+
     public const int PeriodClosing = 50;
     public const string PeriodClosingLabel = "Clôture de période (Jour/Mois)";
 
@@ -79,6 +82,10 @@ public static class FRJetItems
                 break;
             case ReceiptCase.YearlyClosing0x2013:
                 response.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(YearlyClosing, YearlyClosingLabel, identification));
+                break;
+            // Every archive receipt the POS sends asks for JET 20; only a forced archive raises 30 (ADR 0018).
+            case FRReceiptChainExt.ArchiveReceipt:
+                response.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(PeriodArchive, PeriodArchiveLabel, identification));
                 break;
         }
     }

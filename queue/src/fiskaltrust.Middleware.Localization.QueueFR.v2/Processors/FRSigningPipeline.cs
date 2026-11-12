@@ -34,7 +34,7 @@ public class FRSigningPipeline
     }
 
     public Task<ProcessCommandResponse> SignAsync(ProcessCommandRequest request, List<ftActionJournal>? actionJournals = null)
-        => _chains.ExecuteInChainAsync(request.ReceiptRequest, async (chain, totals, lateSigning, pendingMessages) =>
+        => _chains.ExecuteInChainAsync(request.ReceiptRequest, async (chain, totals, lateSigning, pendingMessages, openArchiveFile) =>
         {
             var receiptResponse = request.ReceiptResponse;
             var identificationBeforeSigning = receiptResponse.ftReceiptIdentification;
@@ -124,7 +124,11 @@ public class FRSigningPipeline
                 response.ReceiptResponse.ftState = response.ReceiptResponse.ftState.WithFlag(StateFlags.MessageIsPending);
             }
 
-            return new ProcessCommandResponse(response.ReceiptResponse, [.. actionJournals ?? [], .. lateSigningJournals]);
+            // The one-year cap on the archive file (ADR 0018): the queue records a forced archive and
+            // asks for JET 30 at the limit, and flags an archive as due; it signs nothing on its own.
+            var archiveJournals = FRArchiveDue.Apply(request.ReceiptRequest, response.ReceiptResponse, openArchiveFile, pendingMessages);
+
+            return new ProcessCommandResponse(response.ReceiptResponse, [.. actionJournals ?? [], .. lateSigningJournals, .. archiveJournals]);
 
             // No document was issued, so neither the number nor the period may move - NF525
             // requires the national numbering of every chain to be gapless, and an unsigned
