@@ -140,6 +140,8 @@ public class FRSigningPipeline
             // closing must leave the period open so it can be retried.
             ProcessCommandResponse Unsigned(string reason, bool refused)
             {
+                // An unsigned response still tells the POS the late-signing range is open ([04 F10], as v1.2).
+                FRLateSigning.MarkMode(receiptResponse, lateSigning);
                 chain.Numerator--;
                 receiptResponse.ftReceiptIdentification = identificationBeforeSigning;
                 if (refused)
@@ -154,6 +156,36 @@ public class FRSigningPipeline
                 return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
             }
         });
+
+    /// <summary>
+    /// Stores a receipt v1.2 neither signs nor numbers (0x0005 (Delivery note), 0x3000 (Protocol unspecified), 0x3003
+    /// (Internal usage / material consumption), the SCU switch), unless it is a training receipt: as v1.2, every
+    /// training receipt is signed on chain X (<see cref="FRReceiptChain.Training"/>). An unsigned response carries
+    /// <see cref="StateFlags.LateSigningModeIsActive"/> while the late-signing range is open, as v1.2 set it on every
+    /// response; it neither opens nor extends the range, which only counts signed entries.
+    /// </summary>
+    public async Task<ProcessCommandResponse> SignTrainingOrStoreAsync(ProcessCommandRequest request)
+    {
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
+        {
+            return await SignAsync(request).ConfigureAwait(false);
+        }
+
+        var response = await FRFallBackOperations.NoOp(request).ConfigureAwait(false);
+        try
+        {
+            if (await _chains.ReadAsync(queueFR => new FRLateSigningState(queueFR).IsOpen).ConfigureAwait(false))
+            {
+                response.receiptResponse.ftState = response.receiptResponse.ftState.WithFlag(StateFlags.LateSigningModeIsActive);
+            }
+        }
+        catch (Exception)
+        {
+            // An unreadable chain state costs the flag on an unsigned response, never the response itself.
+        }
+
+        return response;
+    }
 
     /// <summary>True if the receipt came back signed, i.e. the chain actually advanced.</summary>
     public static bool Succeeded(ProcessCommandResponse response) => !response.receiptResponse.ftState.IsState(State.Error);

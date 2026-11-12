@@ -42,8 +42,8 @@ public class ReceiptCommandProcessorFR : IReceiptCommandProcessor
     /// <summary>An e-commerce sale is a ticket in the ticket chain and the grand totals (market-fr#221).</summary>
     public Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => SignTicket(request);
 
-    /// <summary>v1.2 neither signs nor numbers a delivery note (v0 0x09).</summary>
-    public Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
+    /// <summary>v1.2 neither signs nor numbers a delivery note (v0 0x09), except in training, where it is signed on chain X.</summary>
+    public Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => _pipeline.SignTrainingOrStoreAsync(request);
 
     public Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest request) => SignProvisionalDocument(request);
 

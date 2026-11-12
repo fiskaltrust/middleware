@@ -38,8 +38,8 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
         _queueItems = queueItems;
     }
 
-    /// <summary>v1.2 does not sign an unspecified protocol (v0 0x14).</summary>
-    public Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
+    /// <summary>v1.2 does not sign an unspecified protocol (v0 0x14), except in training, where it is signed on chain X.</summary>
+    public Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => _pipeline.SignTrainingOrStoreAsync(request);
 
     /// <summary>
     /// A JET event is validated here, before any SCU signs it, so every certification body refuses the
@@ -60,8 +60,8 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
 
     public Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
 
-    /// <summary>v1.2 does not sign an internal consumption (v0 0x0D).</summary>
-    public Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
+    /// <summary>v1.2 does not sign an internal consumption (v0 0x0D), except in training, where it is signed on chain X.</summary>
+    public Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => _pipeline.SignTrainingOrStoreAsync(request);
 
     /// <summary>v1.2 signs an order as a bill (v0 0x08) in the bill chain, with the provisional-document mention.</summary>
     public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request)
