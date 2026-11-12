@@ -28,36 +28,40 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             "\"ftChargeItemCaseData\":{\"FR\":{\"DiscountCode\":\"D1\",\"a/b\":[1,null]}}}]," +
             "\"cbPayItems\":[{\"Position\":1,\"Description\":\"Cash\",\"Amount\":4.40,\"ftPayItemCase\":" + (0x4652_2000_0008_0001L) + "}]" + extra + "}";
 
-        internal static string Response(string identification, string signature, string serial = "SERIAL-1", long state = 0x4652_2000_0000_0000, long signatureFormatNibble = 2, string extraItems = "", string moment = "2026-03-01T10:00:01.4560000Z", string stateData = "") =>
+        internal static string Response(string identification, string signature, string serial = "SERIAL-1", long state = 0x4652_2000_0000_0000, long signatureFormatNibble = 2, string extraItems = "", string moment = "2026-03-01T10:00:01.4560000Z", string stateData = "", string? previous = null) =>
             "{" + (stateData.Length > 0 ? "\"ftStateData\":" + stateData + "," : "") + "\"ftQueueID\":\"" + QueueId + "\",\"ftCashBoxIdentification\":\"cashbox-fr\",\"ftReceiptIdentification\":\"" + identification + "\"," +
             "\"ftReceiptMoment\":\"" + moment + "\",\"ftState\":" + state + ",\"ftSignatures\":[" +
-            Item(0x0001, Qr(signature, serial), signatureFormatNibble) + "," + Item(0x0009, "12345678901234", signatureFormatNibble) + extraItems + "]}";
+            Item(0x0001, Qr(signature, serial, identification, previous), signatureFormatNibble) + "," + Item(0x0009, "12345678901234", signatureFormatNibble) + extraItems + "]}";
 
         /// <summary>
-        /// The receipt QR code for a test signature, carrying <paramref name="serial"/> where v1.2 did: a
-        /// fake JWS <c>h.p.sig</c> gets a payload with <c>csn</c>, a bare signature gets a minimal data set
-        /// whose fourth-from-last field is the serial. A data set given in full (it holds '|') is kept as is.
+        /// The receipt QR code for a test signature, signing what an SCU signs (ADR 0001): the serial where v1.2
+        /// carried it, the chain counter of <paramref name="identification"/>, the start-of-chain flag and
+        /// <paramref name="previous"/>. A fake JWS <c>h.p.sig</c> gets a payload with those claims, a bare signature
+        /// a minimal data set ending with them. A data set given in full (it holds '|') or a JWS with a real header is kept as is.
         /// </summary>
-        internal static string Qr(string signature, string serial)
+        internal static string Qr(string signature, string serial, string identification = "ft1#T1", string? previous = null)
         {
-            if (signature.Contains('|') || string.IsNullOrEmpty(serial))
+            if (signature.Contains('|') || (signature.Split('.').Length == 3 && !signature.StartsWith("h.")))
             {
                 return signature;
             }
+            ArchiveEntry.TryReadChain(identification, out _, out var counter);
+            var flag = string.IsNullOrEmpty(previous) ? "N" : "O";
             var dot = signature.LastIndexOf('.');
             if (dot < 0)
             {
-                return $"12345678901234|{serial}|1|O|.{signature}";
+                return $"12345678901234|{serial}|{counter}|{flag}|{previous}.{signature}";
             }
-            var payload = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("{\"csn\":\"" + serial + "\"}")).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+            var claims = "{\"siret\":\"12345678901234\",\"csn\":\"" + serial + "\",\"chainCounter\":" + counter + ",\"previousSignatureCarriedOver\":\"" + flag + "\",\"previousSignature\":\"" + previous + "\"}";
+            var payload = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(claims)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
             return $"h.{payload}.{signature.Substring(dot + 1)}";
         }
 
         private static string Item(long type, string data, long nibble) =>
             "{\"ftSignatureFormat\":1,\"ftSignatureType\":" + (0x4652_0000_0000_0000L | (nibble << 44) | type) + ",\"Caption\":\"x\",\"Data\":\"" + data + "\"}";
 
-        internal static ArchiveEntry Entry(string identification, string signature, long row, string serial = "SERIAL-1", long receiptCase = 0x4652_2000_0000_0001, string moment = "2026-03-01T10:00:01.4560000Z")
-            => ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, row, Request(receiptCase), Response(identification, signature, serial, moment: moment))!;
+        internal static ArchiveEntry Entry(string identification, string signature, long row, string serial = "SERIAL-1", long receiptCase = 0x4652_2000_0000_0001, string moment = "2026-03-01T10:00:01.4560000Z", string? previous = null)
+            => ArchiveEntry.Read(Guid.NewGuid(), QueueId, row, Request(receiptCase), Response(identification, signature, serial, moment: moment, previous: previous))!;
 
         private static async Task<string> Write(ICsvFileDefinition<ArchiveEntry> file, params ArchiveEntry[] entries)
         {
@@ -86,7 +90,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             => ArchiveEntry.TryReadChain(identification, out _, out _).Should().BeFalse();
 
         [Fact]
-        public void TryCreate_ReadsASignedV2Entry()
+        public void Read_ReadsASignedV2Entry()
         {
             var entry = Entry("ft1#T3", "h.p.sig3", 5);
 
@@ -100,114 +104,11 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
-        public void RequestHash_IsTheCanonicalRequestFieldOfTheSignedDataSet()
-        {
-            // An LNE QR code, the data set then its signature: SIRET, issuer claims, queue and queue item
-            // ids, then the canonical request field (ADR 0013), never recomputed by the archive.
-            const string signedField = "1:n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=";
-            var dataSet = string.Join("|", "12345678901234", "", "", "", "", "", QueueId, Guid.Empty, signedField, "cashbox-fr", "ft1#T1", "2026-03-01T10:00:01.4560000Z", "4652200000000001", "EUR", "4.40", "13:4.40", "1:4.40", "", "SERIAL-1", "1", "0", "");
-            var lne = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", dataSet + ".t1"))!;
-            var infoCert = Entry("ft1#T1", "h.p.t1", 1);
-
-            lne.RequestHash.Should().Be(signedField);
-            lne.CertificateSerialNumber.Should().Be("SERIAL-1", "the serial is the data set's fourth-from-last field");
-            lne.ChainedSignature.Should().Be("t1");
-            infoCert.RequestHash.Should().BeNull("the InfoCert SCU signs no request hash");
-        }
-
-        [Fact]
-        public async Task JournalFile_WritesTheSignedRequestHash()
-        {
-            const string signedField = "1:n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=";
-            var entry = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "12345678901234|" + signedField + "|x.t1"))!;
-
-            var csv = await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.Journals.Single(j => j.Letter == "T")), entry);
-
-            var lines = csv.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-            var column = Array.IndexOf(lines[0].Split(';'), "RequestHash");
-            lines[1].Split(';')[column].Should().Be(signedField);
-        }
-
-        [Fact]
-        public void TryCreate_SkipsErrorResponsesV1EntriesAndUnsignedOnes()
-        {
-            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "s", state: 0x4652_2000_EEEE_EEEE)).Should().BeNull("an error response is no chain entry");
-            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "s", signatureFormatNibble: 0)).Should().BeNull("v1 signature types have no v2 format nibble");
-            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), null).Should().BeNull("no response yet");
-            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), "not json").Should().BeNull();
-        }
-
-        [Fact]
-        public void Linker_ChainsEachChainOnItsOwnPreviousSignature()
-        {
-            var t1 = Entry("ft1#T1", "h.p.t1", 1);
-            var e1 = Entry("ft2#E1", "e1", 2);
-            var t2 = Entry("ft3#T2", "h.p.t2", 3);
-            var linker = new ArchiveChainLinker();
-
-            foreach (var entry in new[] { t1, e1, t2 })
-            {
-                linker.Link(entry);
-            }
-
-            t1.StartOfChain.Should().BeTrue();
-            t1.PreviousSignature.Should().BeNull();
-            e1.StartOfChain.Should().BeTrue();
-            t2.StartOfChain.Should().BeFalse();
-            t2.PreviousSignature.Should().Be("t1", "the JWS chains on its signature segment (ADR 0001)");
-        }
-
-        [Fact]
-        public void Linker_ChainsABareSignatureWhole()
-        {
-            // LNE and the in-memory SCU store the bare Base64Url signature they also return to the queue as
-            // the chain value; InfoCert stores the JWS and returns its signature segment (ADR 0001).
-            var t1 = Entry("ft1#T1", "lne-sig-1", 1);
-            var t2 = Entry("ft2#T2", "lne-sig-2", 2);
-            var linker = new ArchiveChainLinker();
-
-            linker.Link(t1);
-            linker.Link(t2);
-
-            t2.PreviousSignature.Should().Be("lne-sig-1");
-        }
-
-        [Fact]
-        public void Linker_IgnoresAChainHashItem()
-        {
-            // ADR 0001: the SCUs chain on the signature. A ChainHash item (0x0008) is the shape the SCUs had before
-            // fiskaltrust/middleware#824; the archive does not link on it.
-            var t1 = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "sig-1", extraItems: "," + Item(0x0008, "chain-hash-1", 2)))!;
-            var t2 = Entry("ft2#T2", "sig-2", 2);
-            var linker = new ArchiveChainLinker();
-
-            linker.Link(t1);
-            linker.Link(t2);
-
-            t2.PreviousSignature.Should().Be("sig-1");
-        }
-
-        [Fact]
-        public void Linker_LeavesThePreviousSignatureEmptyWhenThePreviousEntryWasNotSeen()
-        {
-            var t5 = Entry("ft9#T5", "t5", 9);
-
-            new ArchiveChainLinker().Link(t5);
-
-            t5.StartOfChain.Should().BeFalse();
-            t5.PreviousSignature.Should().BeNull();
-        }
-
-        [Fact]
         public async Task JournalFile_HoldsTheJournalsChainsWithTheCommonColumns()
         {
             var t1 = Entry("ft1#T1", "h.p.t1", 1);
             var z1 = Entry("ft2#Z1", "z1", 2);
             var e1 = Entry("ft3#E1", "e1", 3);
-            foreach (var entry in new[] { t1, z1, e1 })
-            {
-                new ArchiveChainLinker().Link(entry);
-            }
 
             var tickets = await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x001)!), t1, z1, e1);
             var technical = await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x004)!), t1, z1, e1);
@@ -216,7 +117,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             var lines = tickets.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             lines.Should().HaveCount(2);
             lines[0].Should().Be("ftQueueItemID;ftQueueID;ftCashBoxIdentification;ftQueueRow;Chain;ftReceiptIdentification;ChainCounter;StartOfChain;PreviousSignature;ftReceiptMoment;cbReceiptMoment;cbReceiptReference;cbPreviousReceiptReference;ftReceiptCase;cbTerminalID;cbUser;cbArea;ftState;RequestHash;Siret;CertificateSerialNumber;SoftwareVersion;Training;Signature;Totalizer;CINormal;CIDiscounted1;CIDiscounted2;CISuperReduced1;CIZero;CIUnknown;PICash;PINonCash;PIInternal;PIUnknown");
-            lines[1].Should().Be($"{t1.QueueItemId};{QueueId};cashbox-fr;1;T;ft1#T1;1;true;;2026-03-01T10:00:01.4560000Z;2026-03-01T10:00:00.1230000Z;R-1;;0x4652200000000001;T1;\"{{\"\"Name\"\":\"\"Ana\"\"}}\";;0x4652200000000000;;12345678901234;SERIAL-1;;false;{Qr("h.p.t1", "SERIAL-1")};;;;;;;;;;;");
+            lines[1].Should().Be($"{t1.QueueItemId};{QueueId};cashbox-fr;1;T;ft1#T1;1;true;;2026-03-01T10:00:01.4560000Z;2026-03-01T10:00:00.1230000Z;R-1;;0x4652200000000001;T1;\"{{\"\"Name\"\":\"\"Ana\"\"}}\";;0x4652200000000000;;12345678901234;SERIAL-1;;false;{Qr("h.p.t1", "SERIAL-1", "ft1#T1")};;;;;;;;;;;");
             technical.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(';')[4])
                 .Should().Equal(new[] { "E" }, "each ADR 0002 chain has its own journal");
             daily.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(';')[4])
@@ -259,7 +160,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         public async Task CaseData_KeepsTheBoundariesOfPreviousReceiptReferences()
         {
             // The journal column joins with commas, so ["a,b","c"] and ["a","b,c"] read the same there.
-            var entry = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(extra: ",\"cbPreviousReceiptReference\":[\"a,b\",\"c\"]"), Response("ft1#T1", "t1"))!;
+            var entry = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, Request(extra: ",\"cbPreviousReceiptReference\":[\"a,b\",\"c\"]"), Response("ft1#T1", "t1"))!;
 
             var caseData = await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.CaseDataFileName), entry);
 
@@ -275,12 +176,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         [Fact]
         public void ChainAnchors_HaveOneEntryPerJournalWithRows_WithItsFirstRowAndPreviousSignatureColumn()
         {
-            var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft1#T2", "t2", 2), Entry("ft1#I1", "i1", 3, receiptCase: 0x4652_2000_0000_1001) };
-            var linker = new ArchiveChainLinker();
-            foreach (var entry in entries)
-            {
-                linker.Link(entry);
-            }
+            var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft1#T2", "t2", 2, previous: "t1"), Entry("ft1#I1", "i1", 3, receiptCase: 0x4652_2000_0000_1001) };
             var subArchive = new SubArchive<ArchiveEntry>(ArchiveV2Files.KeyOf(entries[0]), new ArchivePeriod(new DateTime(2026, 1, 1), new DateTime(2027, 1, 1)), entries.Skip(1).ToList(), null, null);
 
             var anchors = ArchiveV2Files.ChainAnchorsOf(subArchive);
@@ -294,12 +190,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         [Fact]
         public async Task Package_WritesEveryV2FileAndVerifies()
         {
-            var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft2#T2", "t2", 2, serial: "SERIAL-2", moment: "2026-06-01T10:00:00.0000000Z") };
-            var linker = new ArchiveChainLinker();
-            foreach (var entry in entries)
-            {
-                linker.Link(entry);
-            }
+            var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft2#T2", "t2", 2, serial: "SERIAL-2", moment: "2026-06-01T10:00:00.0000000Z", previous: "t1") };
             var archive = ArchiveSplitter.Split(entries, e => e.ReceiptMoment, ArchiveV2Files.KeyOf, new ArchivePeriod(new DateTime(2026, 1, 1), new DateTime(2027, 1, 1))).Single();
             using var certificate = TestFixtures.EcdsaCertificate();
             using var output = new MemoryStream();
@@ -331,7 +222,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         [Fact]
         public async Task SalesJournalAndChargeItems_ReadTheValuesTheQueueStored()
         {
-            var t1 = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "h.p.t1", stateData: StoredState), "1.3.80+abc")!;
+            var t1 = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "h.p.t1", stateData: StoredState), "1.3.80+abc")!;
 
             var journal = Rows(await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x001)!), t1));
             var lines = Rows(await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.ChargeItemsFileName), t1));
@@ -357,7 +248,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         public async Task ClosingJournal_ReadsThePeriodAndPerpetualTotals()
         {
             var state = "{\"FR\":{\"Totals\":{\"Totalizer\":10,\"PICash\":10,\"Perpetual\":{\"Totalizer\":250,\"PICash\":200,\"PINonCash\":50}}}}";
-            var z1 = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(0x4652_2000_0000_2011), Response("ft1#Z1", "z1", stateData: state))!;
+            var z1 = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, Request(0x4652_2000_0000_2011), Response("ft1#Z1", "z1", stateData: state))!;
 
             var rows = Rows(await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x00D)!), z1));
 
@@ -371,7 +262,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         public async Task SignaturesAndJet_HaveOneRowPerItemAndPerJetEvent()
         {
             var jetRequest = "{\"ftReceiptCase\":" + 0x4652_2000_0000_3001L + ",\"cbUser\":\"op1\",\"ftReceiptCaseData\":{\"fr\":{\"code\":50,\"Message\":\"Clôture\",\"Information\":\"jour\"}}}";
-            var l1 = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, jetRequest, Response("ft1#L1", "l1"))!;
+            var l1 = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, jetRequest, Response("ft1#L1", "l1"))!;
             var t1 = Entry("ft2#T1", "h.p.t1", 2);
 
             var signatures = Rows(await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.SignaturesFileName), l1, t1));

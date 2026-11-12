@@ -169,7 +169,8 @@ public class JournalProcessorFR : IJournalProcessor
 
     private async IAsyncEnumerable<byte[]> JournalAsync(ArchiveJournal journal, ArchivePeriod period, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var entries = await ReadEntriesAsync(period, rejectV1: false).ConfigureAwait(false);
+        using var read = await ReadEntriesAsync(period, rejectV1: false).ConfigureAwait(false);
+        var entries = read.Entries;
         var file = ArchiveV2Files.JournalFile(journal);
 
         await foreach (var chunk in ThroughTempFileAsync(async stream =>
@@ -187,7 +188,8 @@ public class JournalProcessorFR : IJournalProcessor
     private async IAsyncEnumerable<byte[]> ArchiveAsync(ArchivePeriod period, Func<Task<IArchiveSigner>> createSigner)
     {
         var signer = await createSigner().ConfigureAwait(false);
-        var entries = await ReadEntriesAsync(period, rejectV1: true).ConfigureAwait(false);
+        using var read = await ReadEntriesAsync(period, rejectV1: true).ConfigureAwait(false);
+        var entries = read.Entries;
         var archive = ArchiveSplitter.Split(entries, e => e.ReceiptMoment, ArchiveV2Files.KeyOf, period, _splitOptions).Single();
 
         var queueFR = await (await _configurationRepository).GetQueueFRAsync(_queueId).ConfigureAwait(false);
@@ -275,38 +277,80 @@ public class JournalProcessorFR : IJournalProcessor
         => new[] { "key", "secret", "password", "token", "connection" }.Any(word => name.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0);
 
     /// <summary>
-    /// The signed v2 entries whose receipt moment falls in <paramref name="period"/>, in queue-row order,
-    /// chained on the entries before them.
+    /// How far before the period start the storage is read. An item's TimeStamp is written with its response,
+    /// after its receipt moment; the margin covers a clock set back in between.
     /// </summary>
-    private async Task<List<ArchiveEntry>> ReadEntriesAsync(ArchivePeriod period, bool rejectV1)
+    private static readonly TimeSpan ReadMargin = TimeSpan.FromDays(1);
+
+    /// <summary>
+    /// The signed v2 entries whose receipt moment falls in <paramref name="period"/>, in queue-row order. Each
+    /// entry carries its chain links as signed (ADR 0001), so the storage is read from the period start only,
+    /// never replayed from the queue's first item (ADR 0012). The entries' requests and responses stay in a
+    /// spool file, not in memory. An item of the period that cannot be read fails the export.
+    /// </summary>
+    private async Task<SpooledEntries> ReadEntriesAsync(ArchivePeriod period, bool rejectV1)
     {
         var repository = await _queueItemRepository;
-        var linker = new ArchiveChainLinker();
-        var entries = new List<ArchiveEntry>();
-
-        // Linking needs queue-row order; the storage returns items by timestamp, which a sequential queue
-        // writes in the same order. A misordered pair would leave PreviousSignature empty, never wrong.
-        await foreach (var queueItem in repository.GetEntriesOnOrAfterTimeStampAsync(0).ConfigureAwait(false))
+        var spool = new ArchiveEntrySpool();
+        try
         {
-            var entry = ArchiveEntry.TryCreate(queueItem.ftQueueItemId, queueItem.ftQueueId, queueItem.ftQueueRow, queueItem.request, queueItem.response, queueItem.ProcessingVersion);
-            if (entry is null)
+            var entries = new List<ArchiveEntry>();
+            var from = Math.Max(0, period.Start.Ticks - ReadMargin.Ticks);
+            await foreach (var queueItem in repository.GetEntriesOnOrAfterTimeStampAsync(from).ConfigureAwait(false))
             {
-                if (rejectV1 && period.Contains(queueItem.ftQueueMoment) && IsV1Entry(queueItem))
+                ArchiveEntry? entry;
+                try
                 {
-                    throw new NotSupportedException(
-                        $"The period {period} holds entries of the v1 QueueFR (queue row {queueItem.ftQueueRow}). Their sub-archive format (ADR 0005) is not written by the QueueFR.v2 localization yet (fiskaltrust/market-fr#192): request the period from the first v2 entry on.");
+                    entry = ArchiveEntry.Read(queueItem.ftQueueItemId, queueItem.ftQueueId, queueItem.ftQueueRow, queueItem.request, queueItem.response, queueItem.ProcessingVersion);
                 }
-                continue;
+                catch (ArchiveEntryException) when (!period.Contains(MomentOf(queueItem)))
+                {
+                    continue;
+                }
+                if (entry is null)
+                {
+                    if (rejectV1 && period.Contains(MomentOf(queueItem)) && IsV1Entry(queueItem))
+                    {
+                        throw new NotSupportedException(
+                            $"The period {period} holds entries of the v1 QueueFR (queue row {queueItem.ftQueueRow}). Their sub-archive format (ADR 0005) is not written by the QueueFR.v2 localization yet (fiskaltrust/market-fr#192): request the period from the first v2 entry on.");
+                    }
+                    continue;
+                }
+                if (period.Contains(entry.ReceiptMoment))
+                {
+                    entries.Add(spool.Keep(entry, queueItem.response));
+                }
             }
 
-            linker.Link(entry);
-            if (period.Contains(entry.ReceiptMoment))
-            {
-                entries.Add(entry);
-            }
+            // The storage returns items by TimeStamp; the archive lists them in queue-row order.
+            entries.Sort((a, b) => a.QueueRow.CompareTo(b.QueueRow));
+            return new SpooledEntries(spool, entries);
+        }
+        catch
+        {
+            spool.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>Where a stored item falls in time: the receipt moment of its response, v1 and v2 alike, else its queue moment.</summary>
+    private static DateTime MomentOf(ftQueueItem queueItem)
+        => ArchiveEntry.ReceiptMomentOf(queueItem.response) ?? DateTime.SpecifyKind(queueItem.ftQueueMoment, DateTimeKind.Utc);
+
+    /// <summary>The entries of an export, and the spool that holds their content until the export is written.</summary>
+    private sealed class SpooledEntries : IDisposable
+    {
+        private readonly ArchiveEntrySpool _spool;
+
+        public SpooledEntries(ArchiveEntrySpool spool, List<ArchiveEntry> entries)
+        {
+            _spool = spool;
+            Entries = entries;
         }
 
-        return entries.OrderBy(e => e.QueueRow).ToList();
+        public List<ArchiveEntry> Entries { get; }
+
+        public void Dispose() => _spool.Dispose();
     }
 
     /// <summary>A v1 FR entry: signed with v1 signature types (<c>0x4652_0000_…</c>, no v2 format nibble).</summary>
