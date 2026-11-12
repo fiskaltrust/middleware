@@ -1,0 +1,9 @@
+﻿-- The archive file a QueueFR v2 queue keeps open (market-fr ADR 0018).
+-- MySQL commits each DDL statement on its own, so the column is added only when missing.
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN OpenArchiveFile LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'OpenArchiveFile');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;

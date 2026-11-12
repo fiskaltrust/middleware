@@ -886,6 +886,12 @@ namespace fiskaltrust.storage.V0
         /// </summary>
         public string ALastSignature { get; set; }
 
+        /// <summary>
+        /// QueueFR v2: the archive file still open (JSON), from which ArchiveIsDue and the forced archive at the
+        /// one-year limit are decided (market-fr ADR 0018)
+        /// </summary>
+        public string OpenArchiveFile { get; set; }
+
         #endregion
 
         #region Late Signing
