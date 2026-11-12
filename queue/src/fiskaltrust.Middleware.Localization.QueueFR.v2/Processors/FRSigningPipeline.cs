@@ -34,7 +34,7 @@ public class FRSigningPipeline
     }
 
     public Task<ProcessCommandResponse> SignAsync(ProcessCommandRequest request, List<ftActionJournal>? actionJournals = null)
-        => _chains.ExecuteInChainAsync(request.ReceiptRequest, async (chain, totals, lateSigning, pendingMessages, openArchiveFile) =>
+        => _chains.ExecuteInChainAsync(request.ReceiptRequest, async (chain, totals, lateSigning, pendingMessages, openArchiveFile, closingDue) =>
         {
             var receiptResponse = request.ReceiptResponse;
             var identificationBeforeSigning = receiptResponse.ftReceiptIdentification;
@@ -128,6 +128,10 @@ public class FRSigningPipeline
             // The one-year cap on the archive file (ADR 0018): the queue records a forced archive and
             // asks for JET 30 at the limit, and flags an archive as due; it signs nothing on its own.
             var archiveJournals = FRArchiveDue.Apply(request.ReceiptRequest, response.ReceiptResponse, openArchiveFile, pendingMessages);
+
+            // The closings the POS should send (contract §1.4): daily after 24 hours, monthly and yearly once the open
+            // period reaches into an earlier calendar month or year. Flags only: nothing is blocked or signed.
+            closingDue.Apply(request.ReceiptRequest, response.ReceiptResponse);
 
             return new ProcessCommandResponse(response.ReceiptResponse, [.. actionJournals ?? [], .. lateSigningJournals, .. archiveJournals]);
 
