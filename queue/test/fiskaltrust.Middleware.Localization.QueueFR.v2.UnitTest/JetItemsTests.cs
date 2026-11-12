@@ -14,7 +14,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 
 /// <summary>
 /// The JET items the middleware adds so the POS sends the event (ADR 0009), market-fr#200 review of
-/// 2026-11-07: lifecycle 260/127, closings 50/60, copies 155/156, and the start-up check 250/255,
+/// 2026-11-07: queue start 260 (none on the stop, contract §6), closings 50/60, copies 155/156, and the start-up check 250/255,
 /// 450 and 270.
 /// </summary>
 public class JetItemsTests
@@ -43,7 +43,6 @@ public class JetItemsTests
 
     [Theory]
     [InlineData(ReceiptCase.InitialOperationReceipt0x4001, "260")]
-    [InlineData(ReceiptCase.OutOfOperationReceipt0x4002, "127")]
     [InlineData(ReceiptCase.DailyClosing0x2011, "50")]
     [InlineData(ReceiptCase.MonthlyClosing0x2012, "50")]
     [InlineData(ReceiptCase.YearlyClosing0x2013, "60")]
@@ -63,6 +62,7 @@ public class JetItemsTests
     [InlineData(ReceiptCase.ShiftClosing0x2010)]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.ZeroReceipt0x2000)]
+    [InlineData(ReceiptCase.OutOfOperationReceipt0x4002)]
     public void OtherReceipts_CarryNoJetItem(ReceiptCase receiptCase)
     {
         var response = Response();
@@ -83,8 +83,9 @@ public class JetItemsTests
     }
 
     [Theory]
-    [InlineData(ReceiptCase.Order0x3004, "155")]
+    [InlineData((ReceiptCase) 0x0006, "155")]
     [InlineData(ReceiptCase.Pay0x3005, "156")]
+    [InlineData(ReceiptCase.PaymentTransfer0x0002, "156")]
     public void CopyOfANoteOrAPaymentProof_CarriesItsJetItem(ReceiptCase copiedCase, string code)
     {
         var response = Response();
@@ -93,6 +94,19 @@ public class JetItemsTests
 
         JetCodes(response).Should().Equal(code);
         response.ftSignatures.Single().Data.Should().Contain("copied.cbReceiptReference=B-7");
+    }
+
+    /// <summary>R19 155 "Duplicata d'une note" is a copy of a 0x0006 (Note [FR]) only (contract §6).</summary>
+    [Theory]
+    [InlineData((ReceiptCase) 0x0007)]
+    [InlineData(ReceiptCase.Order0x3004)]
+    public void CopyOfAProformaOrAnOrder_CarriesNoJetItem(ReceiptCase copiedCase)
+    {
+        var response = Response();
+
+        FRJetItems.AddForCopy(Request(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010), response, "B-7", copiedCase);
+
+        JetCodes(response).Should().BeEmpty();
     }
 
     [Fact]

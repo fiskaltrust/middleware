@@ -23,17 +23,14 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 /// on every response in between;</item>
 /// <item>asks the POS for the JET event 70 "Début de mode dégradé" (R19 v4.2) through a JET
 /// signature item: the queue issues no JET entry itself, the POS sends the event as a
-/// <c>ProtocolTechnicalEvent 0x3001</c> (decision of 2026-11-04 on market-fr#231). JET 120 "Fin de
-/// mode dégradé" is the POS's own event, sent without a prompt when it leaves the mode (decided
-/// 2026-11-05, market-fr#200);</item>
+/// <c>ProtocolTechnicalEvent 0x3001</c> (decision of 2026-11-04 on market-fr#231), and for JET 120
+/// "Fin de mode dégradé" on the zero receipt that closes the range (contract §6, ADR 0009);</item>
 /// <item>prints the range on the closing zero receipt and journals the start and end of the mode,
 /// as v1.2 did.</item>
 /// </list>
 /// Training receipts neither open nor close the mode: the training chain stays apart from the
 /// fiscal chains.
 /// </summary>
-// TODO pending the decision on the JET events the queue raises (market-fr#200): the archive contract (section 6) has the queue raise JET 120 on the zero receipt
-// that ends late signing; this branch leaves 120 to the POS.
 public class FRLateSigning
 {
 
@@ -72,6 +69,14 @@ public class FRLateSigning
             var range = state.Close();
             var (firstReference, firstIdentification) = await FirstReceiptAsync(range, request, response).ConfigureAwait(false);
             response.ftSignatures.Add(SignaturItemFactory.CreateLateSigningEndedSignature(firstIdentification, response.ftReceiptIdentification));
+            response.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(FRJetItems.DegradedModeEnd, FRJetItems.DegradedModeEndLabel, FRJetItems.Information(
+                ("count", range.Count.ToString(CultureInfo.InvariantCulture)),
+                ("first.cbReceiptReference", firstReference),
+                ("first.ftReceiptIdentification", firstIdentification),
+                ("cbReceiptMomentMin", FRJetItems.Moment(range.MomentMin)),
+                ("cbReceiptMomentMax", FRJetItems.Moment(range.MomentMax)),
+                ("closing.cbReceiptReference", request.cbReceiptReference),
+                ("closing.ftReceiptIdentification", response.ftReceiptIdentification))));
             journals.Add(ftActionJournalFactory.CreateLateSigningEndedActionJournal(request, response, range, firstReference, firstIdentification));
         }
 
