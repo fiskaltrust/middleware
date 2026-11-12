@@ -61,7 +61,8 @@ internal static class InfoCertDataSetBuilder
             // Chosen by the receipt case (field 13): the migration event on 0x4022 (Finish migration, ADR 0003), the closed
             // periods on 0x4002 (Queue-stop receipt); empty elsewhere.
             FRSignedRecords.Field20(receiptRequest, response),
-            PeriodTotals(request.PeriodTotals),
+            // Every period the receipt closes, shortest first, then the perpetual totals (the 0x4002 stop signs day, month, year).
+            FRSignedRecords.Field21(request.PeriodTotals),
             // The certificate serial, as in every 25-field data set; the JWS header names it too (kid).
             configuration.CertificateSerialNumber,
             request.ChainCounter.ToString(CultureInfo.InvariantCulture),
@@ -83,24 +84,6 @@ internal static class InfoCertDataSetBuilder
             .GroupBy(x => x.ftPayItemCase.Case())
             .OrderBy(x => (long) x.Key)
             .Select(x => $"{(long) x.Key:X}:{Amount(x.Sum(item => item.Amount))}"));
-
-    private static string PeriodTotals(FRPeriodTotals? periodTotals)
-        => periodTotals is null ? "" : string.Join(',', new[] { periodTotals.Period.ToString() }.Concat(Fields(periodTotals.Current)).Concat(Fields(periodTotals.Perpetual)));
-
-    private static IEnumerable<string> Fields(FRTotals totals) =>
-    [
-        Amount(totals.Totalizer),
-        Amount(totals.CINormal),
-        Amount(totals.CIReduced1),
-        Amount(totals.CIReduced2),
-        Amount(totals.CIReducedS),
-        Amount(totals.CIZero),
-        Amount(totals.CIUnknown),
-        Amount(totals.PICash),
-        Amount(totals.PINonCash),
-        Amount(totals.PIInternal),
-        Amount(totals.PIUnknown),
-    ];
 
     private static string Amount(decimal amount) => amount.ToString("0.00", CultureInfo.InvariantCulture);
 }

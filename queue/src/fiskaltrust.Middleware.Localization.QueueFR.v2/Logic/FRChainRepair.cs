@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.Journal.FR.Archive.V2;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.storage.V0;
@@ -90,7 +92,11 @@ public static class FRChainRepair
     /// Applies one signed entry to the state, as <c>FRSigningPipeline</c> did when it signed it, and
     /// returns the files the one-year limit cut at that entry (their journal entries are the caller's).
     /// </summary>
-    public static List<FROpenArchiveFile.ForcedFile> Apply(ftQueueFR queueFR, SignedEntry entry)
+    /// <param name="integrityDefects">Receives the pending JET 90 journal of an entry whose signed content disagrees with its
+    /// unsigned state copy; the caller stores it. Null to skip the comparison.</param>
+    /// <exception cref="InvalidOperationException">A finish-migration entry signs no readable migration event: whether it was
+    /// stored as signed is unknown, so the state is not rolled over it.</exception>
+    public static List<FROpenArchiveFile.ForcedFile> Apply(ftQueueFR queueFR, SignedEntry entry, List<ftActionJournal>? integrityDefects = null)
     {
         var (_, request, response, chain, number, signature) = entry;
         queueFR.SetNumerator(chain, number);
@@ -124,12 +130,45 @@ public static class FRChainRepair
             pending.Reset();
         }
 
-        // A finish-migration receipt hands the v1 state over with its signed entry (ADR 0003).
-        if (!training && request.ftReceiptCase.Case() == FRMigrationGate.FinishMigration && FRStateData.Migration(response) is { } migrationEvent)
+        // A finish-migration receipt hands the v1 state over with its signed entry (ADR 0003), read from what was signed
+        // (archive-v2 §5: data-set field 20, or the InfoCert payload), never from the unsigned copy in ftStateData.
+        if (!training && request.ftReceiptCase.Case() == FRMigrationGate.FinishMigration)
         {
+            var migrationEvent = SignedMigration(response);
+            if (integrityDefects is not null && !SameEvent(FRStateData.Migration(response), migrationEvent))
+            {
+                integrityDefects.Add(new FRPendingMessagesState(queueFR).Raise(response.ftQueueID, FRChainIntegrity.IntegrityDefect, FRChainIntegrity.IntegrityDefectLabel,
+                    FRJetItems.Information(("ftQueueItemId", response.ftQueueItemID.ToString()), ("defect", "the stored migration event differs from the signed one")), response.ftReceiptMoment));
+            }
             FRV1Handover.Migrate(queueFR, migrationEvent, response.ftReceiptMoment);
         }
 
         return new FROpenArchiveFile(queueFR).Add(request, response, FRArchiveDue.CertificateSerialNumberOf(response));
     }
+
+    /// <summary>The migration event the entry's receipt QR code signs.</summary>
+    /// <exception cref="InvalidOperationException">It signs none that reads.</exception>
+    private static FRMigrationEvent SignedMigration(ReceiptResponse response)
+    {
+        var qrCode = response.ftSignatures?.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature))?.Data ?? "";
+        try
+        {
+            return new FRMigrationEvent
+            {
+                Chains = SignedMigrationEvent.Read(qrCode)
+                    .Select(x => new FRV1ChainHead { Chain = x.Chain, Counter = x.Counter, LastHash = x.LastHash, LastSignature = x.LastSignature })
+                    .ToList(),
+            };
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException($"The finish-migration entry {response.ftQueueItemID} signs no readable migration event ({ex.Message}); the French chain state is not rolled over it.", ex);
+        }
+    }
+
+    private static bool SameEvent(FRMigrationEvent? stored, FRMigrationEvent signed)
+        => stored is not null
+            && stored.Chains.Select(Key).SequenceEqual(signed.Chains.Select(Key));
+
+    private static (string, long, string, string) Key(FRV1ChainHead head) => (head.Chain, head.Counter, head.LastHash ?? "", head.LastSignature ?? "");
 }

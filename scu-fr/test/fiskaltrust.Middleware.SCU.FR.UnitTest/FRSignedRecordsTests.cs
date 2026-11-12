@@ -109,6 +109,64 @@ public class FRSignedRecordsTests
         act.Should().Throw<FRValidationException>().WithMessage("*a;b*");
     }
 
+    // Field 21 (market-fr#221, as v1.2): every period the receipt closes, shortest first, then the perpetual totals.
+
+    private const string Zeros = "0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00";
+
+    private static FRPeriodTotals Monthly() => new()
+    {
+        Period = FRTotalsPeriod.Month,
+        Current = new FRTotals { Totalizer = 13m },
+        Perpetual = new FRTotals { Totalizer = 113m },
+        Closed =
+        [
+            new FRPeriodTotal { Period = FRTotalsPeriod.Day, Totals = new FRTotals { Totalizer = 3m } },
+            new FRPeriodTotal { Period = FRTotalsPeriod.Month, Totals = new FRTotals { Totalizer = 13m } },
+        ],
+    };
+
+    [Fact]
+    public void AMonthlyClosing_SignsTheDayTheMonthAndThePerpetualTotals()
+        => FRSignedRecords.Field21(Monthly()).Should().Be($"Day,3.00,{Zeros};Month,13.00,{Zeros};Perpetual,113.00,{Zeros}");
+
+    [Fact]
+    public void AReceiptReportingItsOwnPeriodOnly_SignsItAndThePerpetualTotals()
+        => FRSignedRecords.Field21(new FRPeriodTotals { Period = FRTotalsPeriod.Archive, Current = new FRTotals { Totalizer = 5m }, Perpetual = new FRTotals { Totalizer = 7m } })
+            .Should().Be($"Archive,5.00,{Zeros};Perpetual,7.00,{Zeros}");
+
+    [Fact]
+    public void NoPeriodTotals_IsEmpty() => FRSignedRecords.Field21(null).Should().BeEmpty();
+
+    [Fact]
+    public void AMonthlyClosing_PrintsTheDayAndTheMonthThenThePerpetualTotals()
+    {
+        var response = new ReceiptResponse { ftSignatures = [] };
+
+        response.AddPeriodTotalsItems(Monthly());
+
+        response.ftSignatures.Select(x => x.Caption).Should().Equal("Day Totals", "Month Totals", "Totals");
+        response.ftSignatures[0].Data.Should().StartWith("Total TTC: 3.00");
+    }
+
+    [Fact]
+    public async Task TheLneDataSet_SignsField21()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var lne = new LneFRSSCD(new LneConfiguration { Siret = FRTestData.Siret, PrivateKey = privateKey, CertificateSerialNumber = "C", LneCertificateNumber = "L" });
+        var request = FRTestData.Request();
+        request.ReceiptRequest.ftReceiptCase = ((ReceiptCase) 0x2012).WithCountry("FR");
+        request.ReceiptRequest.cbChargeItems = [];
+        request.ReceiptRequest.cbPayItems = [];
+        request.PeriodTotals = Monthly();
+
+        var (response, _) = await lne.ProcessReceiptAsync(request, null);
+
+        var fields = FRReceiptQrCode.SignedContentOf(response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data).Split('|');
+        fields.Should().HaveCount(25);
+        fields[20].Should().Be(FRSignedRecords.Field21(Monthly()));
+    }
+
     [Fact]
     public async Task TheLneAndSelfCertifiedDataSets_SignField20()
     {

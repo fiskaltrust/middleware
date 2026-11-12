@@ -70,7 +70,8 @@ internal static class SelfCertifiedDataSetBuilder
             // the migration event on 0x4022 (ADR 0003), the closed periods and their starts on the closings and the
             // queue stop; empty elsewhere. Placed before the period totals so the fields read from the end keep their place.
             FRSignedRecords.Field20(request, response),
-            PeriodTotals(periodTotals),
+            // market-fr#221, archive-v2 §5: every period the receipt closes, shortest first, then the perpetual totals.
+            FRSignedRecords.Field21(periodTotals),
             configuration.CertificateSerialNumber,
             // ADR 0001: the chain counter, the start-of-chain flag and the previous entry's
             // signature, verbatim as its signature field stores it.
@@ -98,29 +99,6 @@ internal static class SelfCertifiedDataSetBuilder
             .GroupBy(x => x.ftPayItemCase.Case())
             .OrderBy(x => (long) x.Key)
             .Select(x => $"{(long) x.Key:X}:{Amount(x.Sum(item => item.Amount))}"));
-
-    /// <summary>
-    /// The accumulated totals of a grand-total (closing) receipt, as
-    /// <c>period,current-fields,perpetual-fields</c>. The field is always present - empty on the
-    /// receipts that are not closings - so the data set keeps a fixed shape.
-    /// </summary>
-    private static string PeriodTotals(FRPeriodTotals? periodTotals)
-        => periodTotals is null ? "" : string.Join(',', new[] { periodTotals.Period.ToString() }.Concat(Fields(periodTotals.Current)).Concat(Fields(periodTotals.Perpetual)));
-
-    private static IEnumerable<string> Fields(FRTotals totals) =>
-    [
-        Amount(totals.Totalizer),
-        Amount(totals.CINormal),
-        Amount(totals.CIReduced1),
-        Amount(totals.CIReduced2),
-        Amount(totals.CIReducedS),
-        Amount(totals.CIZero),
-        Amount(totals.CIUnknown),
-        Amount(totals.PICash),
-        Amount(totals.PINonCash),
-        Amount(totals.PIInternal),
-        Amount(totals.PIUnknown),
-    ];
 
     private static string Amount(decimal amount) => amount.ToString("0.00", CultureInfo.InvariantCulture);
 

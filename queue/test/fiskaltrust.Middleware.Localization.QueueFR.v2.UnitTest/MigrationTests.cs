@@ -227,24 +227,71 @@ public class MigrationTests
         refused.ftState.IsState(State.Error).Should().BeTrue("there is no v1.2 state to migrate");
     }
 
-    /// <summary>A lost store of the finish-migration receipt is replayed: the handover is applied from its signed event.</summary>
-    [Fact]
-    public async Task AReplayedFinishMigrationEntry_HandsTheV1StateOver()
+    /// <summary>
+    /// A finish-migration entry as stored, signed by an LNE-shaped SCU: the migration event in data-set field 20
+    /// (archive-v2 §5). <paramref name="field20"/> replaces the signed event; null signs the event the response carries.
+    /// </summary>
+    private async Task<(FRChainRepair.SignedEntry entry, ReceiptResponse response)> StoredFinishAsync(Func<string, string>? field20 = null)
     {
         await InitiateAsync();
         var finish = Request(0x4022);
         var response = (await _migration.FinishAsync(finish))!.receiptResponse;
-        response.ftSignatures.Add(new SignatureItem { ftSignatureType = (SignatureType) (long) SignatureTypeFR.ReceiptSignature, ftSignatureFormat = SignatureFormat.QRCode, Data = "data.sig-2" });
+        var signed = FRSignedRecords.Field20(finish.ReceiptRequest, Stored(response));
+        var fields = Enumerable.Repeat("", 25).ToArray();
+        fields[19] = field20 is null ? signed : field20(signed);
+        fields[22] = "1";
+        fields[23] = "N";
+        response.ftSignatures.Add(new SignatureItem { ftSignatureType = (SignatureType) (long) SignatureTypeFR.ReceiptSignature, ftSignatureFormat = SignatureFormat.QRCode, Data = string.Join('|', fields) + ".sig-2" });
         var item = new ftQueueItem { ftQueueItemId = response.ftQueueItemID, request = JsonSerializer.Serialize(finish.ReceiptRequest), response = JsonSerializer.Serialize(response) };
-        var queueFR = V1Queue();
-        queueFR.ENumerator = 1;
 
         var (kind, entry) = FRChainRepair.Read(item);
         kind.Should().Be(FRChainRepair.Kind.Signed);
-        FRChainRepair.Apply(queueFR, entry!);
+        return (entry!, response);
+    }
+
+    /// <summary>A lost store of the finish-migration receipt is replayed: the handover is applied from its signed event.</summary>
+    [Fact]
+    public async Task AReplayedFinishMigrationEntry_HandsTheV1StateOver()
+    {
+        var (entry, _) = await StoredFinishAsync();
+        var queueFR = V1Queue();
+        queueFR.ENumerator = 1;
+        var defects = new List<ftActionJournal>();
+
+        FRChainRepair.Apply(queueFR, entry, defects);
 
         FRStateV2.Read(queueFR).MigratedAt.Should().NotBeNull();
         queueFR.GYearTotalizer.Should().Be(1200m);
+        defects.Should().BeEmpty("the stored copy is the signed event");
+    }
+
+    /// <summary>market-fr#221: the replay rebuilds state from what was signed, so an entry signing no event is not rolled over.</summary>
+    [Fact]
+    public async Task AReplayedFinishMigrationEntry_WithoutASignedEvent_IsRefused()
+    {
+        var (entry, _) = await StoredFinishAsync(_ => "");
+        var queueFR = V1Queue();
+        queueFR.ENumerator = 1;
+
+        var act = () => FRChainRepair.Apply(queueFR, entry);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*signs no readable migration event*");
+    }
+
+    /// <summary>The signed event wins over the unsigned copy; a difference is an integrity defect (JET 90).</summary>
+    [Fact]
+    public async Task AReplayedFinishMigrationEntry_WhoseCopyDiffers_RaisesAnIntegrityDefect()
+    {
+        var (entry, response) = await StoredFinishAsync(signed => signed.Replace("T,", "T,9", StringComparison.Ordinal));
+        var queueFR = V1Queue();
+        queueFR.ENumerator = 1;
+        var defects = new List<ftActionJournal>();
+
+        FRChainRepair.Apply(queueFR, entry, defects);
+
+        defects.Should().ContainSingle().Which.Type.Should().StartWith("90");
+        queueFR.MessageCount.Should().Be(1);
+        FRStateV2.Read(queueFR).MigratedAt.Should().NotBeNull("the signed event is handed over");
     }
 
     private static ReceiptResponse Stored(ReceiptResponse response) => JsonSerializer.Deserialize<ReceiptResponse>(JsonSerializer.Serialize(response))!;

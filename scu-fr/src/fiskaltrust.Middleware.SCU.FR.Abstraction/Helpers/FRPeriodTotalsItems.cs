@@ -21,19 +21,24 @@ public static class FRPeriodTotalsItems
             return;
         }
 
-        var (type, caption) = periodTotals.Period switch
+        // Every period the receipt closes, shortest first: a monthly closing prints the day and the month, a yearly
+        // closing and the queue stop the day, the month and the year, as v1.2 (market-fr#221).
+        foreach (var reported in periodTotals.Reported())
         {
-            FRTotalsPeriod.Shift => (SignatureTypeFR.ShiftPeriodTotals, "Shift Totals"),
-            FRTotalsPeriod.Day => (SignatureTypeFR.DayTotals, "Day Totals"),
-            FRTotalsPeriod.Month => (SignatureTypeFR.MonthTotals, "Month Totals"),
-            FRTotalsPeriod.Year => (SignatureTypeFR.YearTotals, "Year Totals"),
-            FRTotalsPeriod.Archive => (SignatureTypeFR.ArchiveTotals, "Archive Totals"),
-            _ => ((SignatureTypeFR?) null, ""),
-        };
+            var (type, caption) = reported.Period switch
+            {
+                FRTotalsPeriod.Shift => (SignatureTypeFR.ShiftPeriodTotals, "Shift Totals"),
+                FRTotalsPeriod.Day => (SignatureTypeFR.DayTotals, "Day Totals"),
+                FRTotalsPeriod.Month => (SignatureTypeFR.MonthTotals, "Month Totals"),
+                FRTotalsPeriod.Year => (SignatureTypeFR.YearTotals, "Year Totals"),
+                FRTotalsPeriod.Archive => (SignatureTypeFR.ArchiveTotals, "Archive Totals"),
+                _ => ((SignatureTypeFR?) null, ""),
+            };
 
-        if (type is { } periodType)
-        {
-            response.AddSignatureItem(periodType, caption, Readable(periodTotals.Current));
+            if (type is { } periodType)
+            {
+                response.AddSignatureItem(periodType, caption, Readable(reported.Totals));
+            }
         }
 
         response.AddSignatureItem(SignatureTypeFR.PerpetualTotals, "Totals", Readable(periodTotals.Perpetual));

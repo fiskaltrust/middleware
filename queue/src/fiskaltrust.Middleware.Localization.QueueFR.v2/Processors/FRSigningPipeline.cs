@@ -43,7 +43,9 @@ public class FRSigningPipeline
             // carries no items, so the snapshot is taken before the receipt is added. A training
             // closing prints the same live figures but closes nothing (PeriodsClosedBy is empty).
             var closingPeriod = FRPeriodTotalsAccumulator.ReportedPeriodOf(request.ReceiptRequest);
-            var periodTotals = closingPeriod is null ? null : totals.Snapshot(closingPeriod.Value);
+            // It reports every period it closes (a monthly closing the day and the month, a yearly closing and the
+            // stop the day, the month and the year), printed and signed as v1.2 (market-fr#221).
+            var periodTotals = closingPeriod is null ? null : totals.Snapshot(closingPeriod.Value, FRPeriodTotalsAccumulator.PeriodsReportedBy(request.ReceiptRequest));
 
             chain.Numerator++;
             ReceiptIdentificationHelper.AppendChainIdentification(receiptResponse, chain);

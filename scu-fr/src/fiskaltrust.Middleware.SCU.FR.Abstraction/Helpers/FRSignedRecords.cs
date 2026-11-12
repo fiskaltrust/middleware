@@ -63,6 +63,37 @@ public static class FRSignedRecords
         return "";
     }
 
+    /// <summary>
+    /// Field 21, the period totals of a closing, the queue stop or an archive receipt: one record per period the
+    /// receipt reports, shortest first, <c>period,amounts</c>, then <c>Perpetual,amounts</c>. The 11 amounts are the
+    /// grand total, the six VAT-case totals and the four pay-item-class totals, TTC with two decimals (archive-v2 §1.3).
+    /// A monthly closing signs Day and Month, a yearly closing and the queue stop Day, Month and Year (market-fr#221,
+    /// as v1.2). Empty on every other receipt.
+    /// </summary>
+    public static string Field21(FRPeriodTotals? periodTotals)
+        => periodTotals is null
+            ? ""
+            : Join(periodTotals.Reported().Select(x => Totals(x.Period.ToString(), x.Totals))
+                .Append(Totals(FRTotalsPeriod.Perpetual.ToString(), periodTotals.Perpetual)));
+
+    private static IEnumerable<string> Totals(string period, FRTotals totals) => new[]
+    {
+        period,
+        Amount(totals.Totalizer),
+        Amount(totals.CINormal),
+        Amount(totals.CIReduced1),
+        Amount(totals.CIReduced2),
+        Amount(totals.CIReducedS),
+        Amount(totals.CIZero),
+        Amount(totals.CIUnknown),
+        Amount(totals.PICash),
+        Amount(totals.PINonCash),
+        Amount(totals.PIInternal),
+        Amount(totals.PIUnknown),
+    };
+
+    private static string Amount(decimal amount) => amount.ToString("0.00", CultureInfo.InvariantCulture);
+
     /// <summary>The migration event, one record per v1 chain in the queue's order.</summary>
     public static string MigrationRecords(FRMigrationEvent migration)
         => Join(migration.Chains.Select(chain => new[]
