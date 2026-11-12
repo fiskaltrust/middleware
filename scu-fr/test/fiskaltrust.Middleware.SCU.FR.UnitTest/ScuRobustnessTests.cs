@@ -136,6 +136,28 @@ public class ScuRobustnessTests
         JsonSerializer.Serialize(result, result.GetType()).Should().Contain($"\"Siret\":\"{FRTestData.Siret}\"").And.Contain("\"SoftwareVersion\":\"2\"").And.Contain("\"PrivateKey\":\"aa\"");
     }
 
+    // The Launcher's sandbox key, read like every other configuration value (P14 reader).
+
+    public static TheoryData<object, bool> SandboxValues => new()
+    {
+        { true, true },
+        { "True", true },
+        { new JValue(true), true },
+        { new JValue("true"), true },
+        { JsonDocument.Parse("true").RootElement, true },
+        { false, false },
+        { new JValue(false), false },
+        { "no", false },
+    };
+
+    [Theory]
+    [MemberData(nameof(SandboxValues))]
+    public void TheSandboxKey_IsReadWhateverItsForm(object value, bool expected)
+    {
+        LneConfiguration.FromConfiguration(Lne(c => c["sandbox"] = value)).Sandbox.Should().Be(expected);
+        InfoCertConfiguration.FromConfiguration(Lne(c => c["sandbox"] = value)).Sandbox.Should().Be(expected);
+    }
+
     // [01 #16]: the state data the SCU reads may come camelCased or as a Newtonsoft object.
 
     [Fact]

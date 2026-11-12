@@ -33,14 +33,8 @@ public static class FRSandbox
                 continue;
             }
 
-            return entry.Value switch
-            {
-                bool b => b,
-                string s => bool.TryParse(s, out var parsed) && parsed,
-                JsonElement { ValueKind: JsonValueKind.True } => true,
-                JsonElement { ValueKind: JsonValueKind.String } e => bool.TryParse(e.GetString(), out var parsed) && parsed,
-                _ => false,
-            };
+            // Read like every other configuration value (FRScuConfiguration), so a Newtonsoft value counts too.
+            return bool.TryParse(FRScuConfiguration.Text(entry.Value), out var parsed) && parsed;
         }
 
         return false;

@@ -33,6 +33,9 @@ public static class FRScuConfiguration
         return json.Deserialize<T>(ReadOptions) ?? new T();
     }
 
+    /// <summary>A scalar configuration value as the text <see cref="Read{T}"/> would read it; null for a missing or structured value.</summary>
+    public static string? Text(object? value) => Node(value) is JsonValue scalar && scalar.TryGetValue<string>(out var text) ? text : null;
+
     private static JsonNode? Node(object? value)
     {
         switch (value)
