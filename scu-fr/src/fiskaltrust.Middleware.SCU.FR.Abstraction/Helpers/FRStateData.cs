@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.fr;
@@ -25,8 +26,8 @@ public static class FRStateData
     {
         var stateData = AsJson(response.ftStateData);
         return stateData is { ValueKind: JsonValueKind.Object } json
-            && json.TryGetProperty(Block, out var fr) && fr.ValueKind == JsonValueKind.Object
-            && fr.TryGetProperty(CopyNumberProperty, out var number) && number.ValueKind == JsonValueKind.Number
+            && TryGet(json, Block, out var fr) && fr.ValueKind == JsonValueKind.Object
+            && TryGet(fr, CopyNumberProperty, out var number) && number.ValueKind == JsonValueKind.Number
                 ? number.GetInt32()
                 : null;
     }
@@ -39,8 +40,8 @@ public static class FRStateData
     {
         var stateData = AsJson(response.ftStateData);
         return stateData is { ValueKind: JsonValueKind.Object } json
-            && json.TryGetProperty(Block, out var fr) && fr.ValueKind == JsonValueKind.Object
-            && fr.TryGetProperty(ArchiveProperty, out var archive) && archive.ValueKind == JsonValueKind.Object
+            && TryGet(json, Block, out var fr) && fr.ValueKind == JsonValueKind.Object
+            && TryGet(fr, ArchiveProperty, out var archive) && archive.ValueKind == JsonValueKind.Object
                 ? archive.Deserialize<FRArchiveBoundaries>(ReadOptions)
                 : null;
     }
@@ -50,8 +51,8 @@ public static class FRStateData
     {
         var stateData = AsJson(response.ftStateData);
         return stateData is { ValueKind: JsonValueKind.Object } json
-            && json.TryGetProperty(Block, out var fr) && fr.ValueKind == JsonValueKind.Object
-            && fr.TryGetProperty(MigrationProperty, out var migration) && migration.ValueKind == JsonValueKind.Object
+            && TryGet(json, Block, out var fr) && fr.ValueKind == JsonValueKind.Object
+            && TryGet(fr, MigrationProperty, out var migration) && migration.ValueKind == JsonValueKind.Object
                 ? migration.Deserialize<FRMigrationEvent>(ReadOptions)
                 : null;
     }
@@ -64,6 +65,23 @@ public static class FRStateData
         null => null,
         JsonElement json => json,
         string text => JsonDocument.Parse(text).RootElement,
+        // A Newtonsoft object is read through its own JSON text: System.Text.Json would walk its Parent/Root cycle.
+        _ when FRJsonValues.IsJToken(stateData.GetType()) => JsonDocument.Parse(stateData.ToString()!).RootElement,
         _ => JsonSerializer.SerializeToElement(stateData, stateData.GetType()),
     };
+
+    /// <summary>A property matched case-insensitively: behind REST the casing may differ ([01 #16]).</summary>
+    private static bool TryGet(JsonElement element, string name, out JsonElement value)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+        value = default;
+        return false;
+    }
 }

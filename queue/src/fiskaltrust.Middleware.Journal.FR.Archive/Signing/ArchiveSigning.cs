@@ -51,6 +51,10 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Signing
             {
                 throw new ArgumentException("The archive signing certificate must have an RSA or ECDSA key.", nameof(certificateWithPrivateKey));
             }
+            if (_rsa is not null && _rsa.KeySize < MinimumRsaKeySize)
+            {
+                throw new ArgumentException($"An RSA archive signing certificate must hold a key of at least {MinimumRsaKeySize} bits, not {_rsa.KeySize}.", nameof(certificateWithPrivateKey));
+            }
             if (_ecdsa is not null && !ArchiveSignatureVerifier.IsP256(_ecdsa))
             {
                 throw new ArgumentException("An ECDSA archive signing certificate must use the NIST P-256 curve (ES256).", nameof(certificateWithPrivateKey));
@@ -58,6 +62,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Signing
             SignatureAlgorithm = _rsa is not null ? ArchiveSignatureAlgorithms.RS256 : ArchiveSignatureAlgorithms.ES256;
             Certificate = new X509Certificate2(certificateWithPrivateKey.RawData);
         }
+
+        /// <summary>The smallest RSA key an archive is signed with (Ref LNE 1.8 recommends 2048 bits; ANSSI RGS requires it).</summary>
+        public const int MinimumRsaKeySize = 2048;
 
         public X509Certificate2 Certificate { get; }
 

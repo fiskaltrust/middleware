@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.SelfCertified.Models;
@@ -52,6 +53,11 @@ public class SelfCertifiedFRSSCD : IFRSSCD, IDisposable
         try
         {
             return Task.FromResult(SignReceipt(request, previousSignature));
+        }
+        catch (FRValidationException ex)
+        {
+            // A value the data set cannot hold: this receipt is refused, the SCU is not unavailable.
+            return Task.FromResult(request.ReceiptResponse.ToSigningFailure($"The self-certified SCU refuses receipt {request.ReceiptRequest?.cbReceiptReference}: {ex.Message}", StateFR.Error));
         }
         catch (Exception ex)
         {

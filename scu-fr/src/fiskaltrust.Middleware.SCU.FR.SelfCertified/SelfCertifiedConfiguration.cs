@@ -51,9 +51,7 @@ public class SelfCertifiedConfiguration
 
     public static SelfCertifiedConfiguration FromConfiguration(Dictionary<string, object> configuration)
     {
-        var serialized = JsonSerializer.Serialize(configuration);
-        var result = JsonSerializer.Deserialize<SelfCertifiedConfiguration>(serialized, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-            ?? new SelfCertifiedConfiguration();
+        var result = FRScuConfiguration.Read<SelfCertifiedConfiguration>(configuration);
 
         if (string.IsNullOrWhiteSpace(result.Siret))
         {
@@ -65,6 +63,9 @@ public class SelfCertifiedConfiguration
             throw new FRValidationException("The self-certified SCU requires a PrivateKey (base64 encoded secp256r1 key) in its configuration.");
         }
 
+        FRScuConfiguration.CheckSerialMatchesCertificate("self-certified", result.CertificateBase64, result.CertificateSerialNumber);
+        FRIssuerClaims.RejectCharacter("self-certified", nameof(Siret), result.Siret, Signing.SelfCertifiedDataSetBuilder.FieldSeparator);
+        FRIssuerClaims.RejectCharacter("self-certified", nameof(CertificateSerialNumber), result.CertificateSerialNumber, Signing.SelfCertifiedDataSetBuilder.FieldSeparator);
         FRIssuerClaims.ValidateVatOption("self-certified", result.VatOption);
         FRIssuerClaims.RejectCharacter("self-certified", nameof(Rcs), result.Rcs, Signing.SelfCertifiedDataSetBuilder.FieldSeparator);
         FRIssuerClaims.RejectCharacter("self-certified", nameof(Naf), result.Naf, Signing.SelfCertifiedDataSetBuilder.FieldSeparator);

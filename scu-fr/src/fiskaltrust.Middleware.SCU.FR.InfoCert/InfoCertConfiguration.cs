@@ -61,9 +61,7 @@ public class InfoCertConfiguration
 
     public static InfoCertConfiguration FromConfiguration(Dictionary<string, object> configuration)
     {
-        var serialized = JsonSerializer.Serialize(configuration);
-        var result = JsonSerializer.Deserialize<InfoCertConfiguration>(serialized, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-            ?? new InfoCertConfiguration();
+        var result = FRScuConfiguration.Read<InfoCertConfiguration>(configuration);
 
         if (string.IsNullOrWhiteSpace(result.Siret))
         {
@@ -75,6 +73,7 @@ public class InfoCertConfiguration
             throw new FRValidationException("The Infocert SCU requires a PrivateKey (base64 encoded secp256r1 key) in its configuration.");
         }
 
+        FRScuConfiguration.CheckSerialMatchesCertificate("Infocert", result.CertificateBase64, result.CertificateSerialNumber);
         FRIssuerClaims.ValidateVatOption("Infocert", result.VatOption);
 
         if (!string.IsNullOrEmpty(result.SoftwareCategory) && System.Array.IndexOf(InfoCertMention.Categories, result.SoftwareCategory) < 0)

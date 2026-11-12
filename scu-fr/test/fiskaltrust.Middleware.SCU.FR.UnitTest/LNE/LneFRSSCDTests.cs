@@ -354,7 +354,7 @@ public class LneFRSSCDTests
     [Fact]
     public void FromConfiguration_WithAnUnknownVatOption_IsRejected()
     {
-        var act = () => LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["VatOption"] = "monthly" });
+        var act = () => LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["CertificateSerialNumber"] = "CERT-4711", ["LneCertificateNumber"] = "LNE-1", ["VatOption"] = "monthly" });
 
         act.Should().Throw<FRValidationException>().WithMessage("*VatOption*");
     }
@@ -362,7 +362,7 @@ public class LneFRSSCDTests
     [Fact]
     public void FromConfiguration_WithTheFieldSeparatorInAClaim_IsRejected()
     {
-        var act = () => LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["LegalForm"] = "SAS|SARL" });
+        var act = () => LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["CertificateSerialNumber"] = "CERT-4711", ["LneCertificateNumber"] = "LNE-1", ["LegalForm"] = "SAS|SARL" });
 
         act.Should().Throw<FRValidationException>().WithMessage("*LegalForm*|*");
     }
@@ -370,7 +370,7 @@ public class LneFRSSCDTests
     [Fact]
     public void FromConfiguration_ReadsTheIssuerClaims()
     {
-        var configuration = LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["rcs"] = "RCS Paris B 1", ["VatOption"] = "receipts" });
+        var configuration = LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["CertificateSerialNumber"] = "CERT-4711", ["LneCertificateNumber"] = "LNE-1", ["rcs"] = "RCS Paris B 1", ["VatOption"] = "receipts" });
 
         configuration.Rcs.Should().Be("RCS Paris B 1");
         configuration.VatOption.Should().Be("receipts");

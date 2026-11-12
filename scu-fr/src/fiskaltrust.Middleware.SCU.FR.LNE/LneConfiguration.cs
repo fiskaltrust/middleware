@@ -49,9 +49,7 @@ public class LneConfiguration
 
     public static LneConfiguration FromConfiguration(Dictionary<string, object> configuration)
     {
-        var serialized = JsonSerializer.Serialize(configuration);
-        var result = JsonSerializer.Deserialize<LneConfiguration>(serialized, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-            ?? new LneConfiguration();
+        var result = FRScuConfiguration.Read<LneConfiguration>(configuration);
 
         if (string.IsNullOrWhiteSpace(result.Siret))
         {
@@ -63,6 +61,21 @@ public class LneConfiguration
             throw new FRValidationException("The LNE SCU requires a PrivateKey (base64 encoded secp256r1 key) in its configuration.");
         }
 
+        // Ref LNE 1.8 Ex. 9: the serial selects the certificate that verifies the signature, and the LNE certificate
+        // number is the certification mention printed on every receipt.
+        if (string.IsNullOrWhiteSpace(result.CertificateSerialNumber))
+        {
+            throw new FRValidationException("The LNE SCU requires the CertificateSerialNumber of its signing certificate in its configuration.");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.LneCertificateNumber))
+        {
+            throw new FRValidationException("The LNE SCU requires the LneCertificateNumber of the certified solution in its configuration.");
+        }
+
+        FRScuConfiguration.CheckSerialMatchesCertificate("LNE", result.CertificateBase64, result.CertificateSerialNumber);
+        FRIssuerClaims.RejectCharacter("LNE", nameof(Siret), result.Siret, Signing.LneDataSetBuilder.FieldSeparator);
+        FRIssuerClaims.RejectCharacter("LNE", nameof(CertificateSerialNumber), result.CertificateSerialNumber, Signing.LneDataSetBuilder.FieldSeparator);
         FRIssuerClaims.ValidateVatOption("LNE", result.VatOption);
         FRIssuerClaims.RejectCharacter("LNE", nameof(Rcs), result.Rcs, Signing.LneDataSetBuilder.FieldSeparator);
         FRIssuerClaims.RejectCharacter("LNE", nameof(Naf), result.Naf, Signing.LneDataSetBuilder.FieldSeparator);
