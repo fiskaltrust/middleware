@@ -41,7 +41,7 @@ public class InfoCertFRSSCDTests
         var jws = response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data;
         var parts = jws.Split('.');
         parts.Should().HaveCount(3);
-        Encoding.UTF8.GetString(FromBase64Url(parts[0])).Should().Be("{\"alg\":\"ES256\",\"typ\":\"JWT\"}");
+        Encoding.UTF8.GetString(FromBase64Url(parts[0])).Should().Be("{\"alg\":\"ES256\",\"typ\":\"JWT\",\"kid\":\"CERT-4711\"}", "the certificate serial is signed as the header's kid");
         signature.Should().Be(parts[2], "the chained value is the JWS signature segment, never a re-encoding of it");
         FRTestData.IsBase64Url(signature).Should().BeTrue();
     }
@@ -70,21 +70,23 @@ public class InfoCertFRSSCDTests
         using var _ = key;
         using var sut = new InfoCertFRSSCD(Configuration(privateKey));
 
+        var secondRequest = FRTestData.Request(2);
+        secondRequest.ReceiptResponse.ftReceiptIdentification = "T2";
         var (first, firstSignature) = await sut.ProcessReceiptAsync(FRTestData.Request(1), null);
-        var (second, _) = await sut.ProcessReceiptAsync(FRTestData.Request(2), firstSignature);
+        var (second, _) = await sut.ProcessReceiptAsync(secondRequest, firstSignature);
 
         firstSignature.Should().Be(SignatureOf(first).Split('.')[2]);
 
-        using var firstPayload = JsonDocument.Parse(FromBase64Url(SignatureOf(first).Split('.')[1]));
-        firstPayload.RootElement.GetProperty("chainCounter").GetInt64().Should().Be(1);
-        firstPayload.RootElement.GetProperty("previousSignatureCarriedOver").GetString().Should().Be("N", "the first entry starts the chain");
-        firstPayload.RootElement.GetProperty("previousSignature").GetString().Should().BeEmpty();
+        // R13 note/ticket string: the number (TAG-TIK-NUM = ftReceiptIdentification) carries the counter, then flag and previous signature.
+        var firstFields = PayloadOf(first).Split(',');
+        firstFields[3].Should().Be("T1");
+        firstFields[^2].Should().Be("N", "the first entry starts the chain");
+        firstFields[^1].Should().BeEmpty();
 
-        using var secondPayload = JsonDocument.Parse(FromBase64Url(SignatureOf(second).Split('.')[1]));
-        secondPayload.RootElement.GetProperty("chainCounter").GetInt64().Should().Be(2);
-        secondPayload.RootElement.GetProperty("previousSignatureCarriedOver").GetString().Should().Be("O");
-        secondPayload.RootElement.GetProperty("previousSignature").GetString().Should().Be(firstSignature, "the signed payload carries the previous entry's signature verbatim");
-        secondPayload.RootElement.TryGetProperty("lastHash", out var _).Should().BeFalse();
+        var secondFields = PayloadOf(second).Split(',');
+        secondFields[3].Should().Be("T2");
+        secondFields[^2].Should().Be("O");
+        secondFields[^1].Should().Be(firstSignature, "the signed string carries the previous entry's signature verbatim");
     }
 
     [Fact]
@@ -94,14 +96,13 @@ public class InfoCertFRSSCDTests
         using var _ = key;
         using var sut = new InfoCertFRSSCD(Configuration(privateKey));
         var copy = FRTestData.Copy(3);
+        copy.ReceiptRequest.ftReceiptCase = ((ReceiptCase) 0x3010).WithCountry("FR");
 
         var (copied, _) = await sut.ProcessReceiptAsync(copy, null);
         var (ticket, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
-        using var copyPayload = JsonDocument.Parse(FromBase64Url(SignatureOf(copied).Split('.')[1]));
-        copyPayload.RootElement.GetProperty("copyNumber").GetInt32().Should().Be(3, "R13 ENC-DUP-PRN-NUM is part of the signed duplicate");
-        using var ticketPayload = JsonDocument.Parse(FromBase64Url(SignatureOf(ticket).Split('.')[1]));
-        ticketPayload.RootElement.TryGetProperty("copyNumber", out var _).Should().BeFalse();
+        PayloadOf(copied).Split(',')[2].Should().Be("3", "R13 TAG-DUP-PRN-NUM is part of the signed duplicate");
+        PayloadOf(ticket).Split(',').Should().HaveCount(7, "a ticket signs the note/ticket string, which has no reprint number");
     }
 
     [Fact]
@@ -114,10 +115,11 @@ public class InfoCertFRSSCDTests
         var (archive, _) = await sut.ProcessReceiptAsync(FRTestData.Archive(), null);
         var (ticket, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
-        using var archivePayload = JsonDocument.Parse(FromBase64Url(SignatureOf(archive).Split('.')[1]));
-        archivePayload.RootElement.GetProperty("archive").GetProperty("PreviousArchiveQueueItemId").GetGuid().Should().Be(FRTestData.PreviousArchive);
-        using var ticketPayload = JsonDocument.Parse(FromBase64Url(SignatureOf(ticket).Split('.')[1]));
-        ticketPayload.RootElement.TryGetProperty("archive", out var _).Should().BeFalse();
+        // R13 archive string: TAG-ARC (identification, boundaries, day/month/year totals), flag, previous signature.
+        var archiveFields = PayloadOf(archive).Split(',');
+        archiveFields.Should().HaveCount(29);
+        archiveFields[1].Should().Be(FRTestData.PreviousArchive.ToString("D"));
+        PayloadOf(ticket).Should().NotContain(FRTestData.PreviousArchive.ToString("D"));
     }
 
     [Fact]
@@ -134,9 +136,9 @@ public class InfoCertFRSSCDTests
         signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ShiftTotals), "no separate certificate item, as in v1.2");
         var qr = signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature));
         qr.Caption.Should().Be("www.fiskaltrust.fr");
-        using (var payload = System.Text.Json.JsonDocument.Parse(FRTestData.FromBase64Url(qr.Data.Split('.')[1])))
+        using (var header = System.Text.Json.JsonDocument.Parse(FRTestData.FromBase64Url(qr.Data.Split('.')[0])))
         {
-            payload.RootElement.GetProperty("csn").GetString().Should().Be("CERT-4711", "the serial is signed in the JWS payload under v1.2's key");
+            header.RootElement.GetProperty("kid").GetString().Should().Be("CERT-4711", "the serial is signed in the JWS header");
         }
         signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Siret)).Data.Should().Be(FRTestData.Siret);
         signatures.Should().ContainSingle(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody));
@@ -245,8 +247,12 @@ public class InfoCertFRSSCDTests
         act.Should().Throw<FRValidationException>().WithMessage("*PrivateKey*");
     }
 
+    /// <summary>
+    /// R12/R13 list the seller's identity as data and archive fields, not in the signed strings: a ticket signs none of
+    /// them. Chain E's 25-field data set keeps them at fields 2–5, and field 6 (formerly BT-34) stays empty.
+    /// </summary>
     [Fact]
-    public async Task IssuerClaims_AreSignedNextToTheSiret()
+    public async Task IssuerClaims_AreNotInTheR13String_AndStayInTheChainEDataSet()
     {
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
@@ -258,31 +264,17 @@ public class InfoCertFRSSCDTests
         configuration.ElectronicAddress = "123456789";
         using var sut = new InfoCertFRSSCD(configuration);
 
-        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+        var (ticket, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+        var zero = FRTestData.Request();
+        zero.ReceiptRequest.ftReceiptCase = ((ReceiptCase) 0x2000).WithCountry("FR");
+        zero.ReceiptRequest.cbChargeItems = [];
+        zero.ReceiptRequest.cbPayItems = [];
+        var (zeroReceipt, _) = await sut.ProcessReceiptAsync(zero, null);
 
-        using var payload = JsonDocument.Parse(FromBase64Url(SignatureOf(response).Split('.')[1]));
-        var root = payload.RootElement;
-        root.GetProperty("rcs").GetString().Should().Be("RCS Nanterre B 642036065");
-        root.GetProperty("naf").GetString().Should().Be("4711D");
-        root.GetProperty("legalform").GetString().Should().Be("SAS, au capital de 500000 EUR");
-        root.GetProperty("vatoption").GetString().Should().Be("receipts");
-        root.GetProperty("elecaddress").GetString().Should().Be("123456789");
-    }
-
-    [Fact]
-    public async Task IssuerClaims_AreOmittedWhenNotConfigured()
-    {
-        var (privateKey, key) = FRTestData.CreateKey();
-        using var _ = key;
-        using var sut = new InfoCertFRSSCD(Configuration(privateKey));
-
-        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
-
-        using var payload = JsonDocument.Parse(FromBase64Url(SignatureOf(response).Split('.')[1]));
-        foreach (var claim in new[] { "rcs", "naf", "legalform", "vatoption", "elecaddress" })
-        {
-            payload.RootElement.TryGetProperty(claim, out var _).Should().BeFalse(claim);
-        }
+        PayloadOf(ticket).Should().NotContain("4711D").And.NotContain(FRTestData.Siret).And.NotContain("123456789");
+        var dataSet = PayloadOf(zeroReceipt).Split('|');
+        dataSet.Should().HaveCount(25);
+        dataSet[..6].Should().Equal(FRTestData.Siret, "RCS Nanterre B 642036065", "4711D", "SAS, au capital de 500000 EUR", "receipts", "");
     }
 
     [Fact]
@@ -390,4 +382,7 @@ public class InfoCertFRSSCDTests
         => response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data;
 
     private static byte[] FromBase64Url(string value) => FRTestData.FromBase64Url(value);
+
+    /// <summary>The signed string: the JWS payload, Base64Url-decoded, UTF-8.</summary>
+    private static string PayloadOf(ProcessResponse response) => Encoding.UTF8.GetString(FromBase64Url(SignatureOf(response).Split('.')[1]));
 }

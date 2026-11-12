@@ -92,6 +92,32 @@ public static class FRStateData
     public const string ClosingProperty = "Closing";
     public const string PeriodsProperty = "Periods";
 
+    public const string CopyTypeProperty = "CopyType";
+    public const string CopiedReceiptIdentificationProperty = "CopiedReceiptIdentification";
+    public const string OriginReceiptIdentificationProperty = "OriginReceiptIdentification";
+
+    /// <summary>
+    /// A text value of the FR block (<c>ftStateData.FR.&lt;name&gt;</c>), e.g. <see cref="CopyTypeProperty"/>; an array of
+    /// texts is joined with <c>,</c>. Null when absent or empty.
+    /// </summary>
+    public static string? Text(ReceiptResponse response, string name)
+    {
+        var stateData = AsJson(response.ftStateData);
+        if (stateData is not { ValueKind: JsonValueKind.Object } json
+            || !TryGet(json, Block, out var fr) || fr.ValueKind != JsonValueKind.Object
+            || !TryGet(fr, name, out var value))
+        {
+            return null;
+        }
+        var text = value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Array => string.Join(",", value.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString())),
+            _ => null,
+        };
+        return string.IsNullOrEmpty(text) ? null : text;
+    }
+
     // The queue writes its state data as typed objects; behind REST the casing may differ.
     private static readonly JsonSerializerOptions ReadOptions = new() { PropertyNameCaseInsensitive = true };
 
