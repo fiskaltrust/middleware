@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.fr;
@@ -56,6 +57,40 @@ public static class FRStateData
                 ? migration.Deserialize<FRMigrationEvent>(ReadOptions)
                 : null;
     }
+
+    /// <summary>
+    /// The periods a closing (0x2010–0x2013) or the queue stop (0x4002) closes, each with where its totals started
+    /// (<c>ftStateData.FR.Closing.Periods</c>, market-fr#221); empty when the queue handed none over.
+    /// </summary>
+    /// <exception cref="FormatException">A period does not read.</exception>
+    public static IReadOnlyList<FRClosedPeriod> ClosedPeriods(ReceiptResponse response)
+    {
+        var stateData = AsJson(response.ftStateData);
+        if (stateData is not { ValueKind: JsonValueKind.Object } json
+            || !TryGet(json, Block, out var fr) || fr.ValueKind != JsonValueKind.Object
+            || !TryGet(fr, ClosingProperty, out var closing) || closing.ValueKind != JsonValueKind.Object
+            || !TryGet(closing, PeriodsProperty, out var periods) || periods.ValueKind != JsonValueKind.Array)
+        {
+            return Array.Empty<FRClosedPeriod>();
+        }
+
+        var result = new List<FRClosedPeriod>();
+        foreach (var item in periods.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object
+                || !TryGet(item, "Period", out var period) || period.ValueKind != JsonValueKind.String
+                || !Enum.TryParse<FRTotalsPeriod>(period.GetString(), ignoreCase: true, out var parsed)
+                || !TryGet(item, "Start", out var start) || start.ValueKind != JsonValueKind.String || !start.TryGetDateTime(out var moment))
+            {
+                throw new FormatException($"The closed period {item.GetRawText()} handed over by the queue does not read.");
+            }
+            result.Add(new FRClosedPeriod { Period = parsed, Start = moment });
+        }
+        return result;
+    }
+
+    public const string ClosingProperty = "Closing";
+    public const string PeriodsProperty = "Periods";
 
     // The queue writes its state data as typed objects; behind REST the casing may differ.
     private static readonly JsonSerializerOptions ReadOptions = new() { PropertyNameCaseInsensitive = true };

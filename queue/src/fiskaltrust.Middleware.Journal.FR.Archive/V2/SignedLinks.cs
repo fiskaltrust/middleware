@@ -27,12 +27,14 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         private const int LneDataSetFieldCount = 25;
         private const int LneQueueItemIdField = 7;
         private const int LneRequestHashField = 8;
+        private const int LneField20 = 19;
 
         // FRCanonicalRequest.SignedField: the canonical-form version, a colon, the padded Base64 SHA-256 (ADR 0013).
         private static readonly Regex SignedRequestHashField = new Regex("^[0-9]+:[A-Za-z0-9+/]{43}=$", RegexOptions.CultureInvariant);
 
-        private SignedLinks(long chainCounter, string flag, string? previousSignature, string? siret, string? certificateSerialNumber, string? requestHash, IssuerClaims? issuer = null, bool jws = false)
+        private SignedLinks(long chainCounter, string flag, string? previousSignature, string? siret, string? certificateSerialNumber, string? requestHash, IssuerClaims? issuer = null, bool jws = false, string? field20 = null)
         {
+            Field20 = string.IsNullOrEmpty(field20) ? null : field20;
             Jws = jws;
             Issuer = issuer ?? IssuerClaims.None;
             if (flag != "O" && flag != "N")
@@ -55,6 +57,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         /// <summary>True when the signed content is a JWS (the InfoCert SCU), false for a data set.</summary>
         public bool Jws { get; }
+
+        /// <summary>
+        /// Field 20 of the LNE and self-certified data set, as signed (archive-v2 §5, market-fr#221): the archive boundaries,
+        /// the migration event or the closed periods, by receipt case; null when empty or not a 25-field data set.
+        /// </summary>
+        public string? Field20 { get; }
 
         public long ChainCounter { get; }
 
@@ -114,7 +122,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 }
             }
             var issuer = n == LneDataSetFieldCount ? new IssuerClaims(fields[1], fields[2], fields[3], fields[4], fields[5]) : null;
-            return new SignedLinks(counter, fields[n - 2], fields[n - 1], fields[0], fields[n - 4], requestHash, issuer);
+            return new SignedLinks(counter, fields[n - 2], fields[n - 1], fields[0], fields[n - 4], requestHash, issuer, field20: n == LneDataSetFieldCount ? fields[LneField20] : null);
         }
 
         private static SignedLinks FromJws(string headerAndPayload)

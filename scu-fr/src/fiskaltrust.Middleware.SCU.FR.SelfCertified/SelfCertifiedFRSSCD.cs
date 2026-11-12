@@ -74,7 +74,7 @@ public class SelfCertifiedFRSSCD : IFRSSCD, IDisposable
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
 
-        var dataSet = SelfCertifiedDataSetBuilder.Build(receiptRequest, response, _configuration, request.ChainCounter, previousSignature, request.PeriodTotals, FRStateData.CopyNumber(response), FRStateData.Archive(response));
+        var dataSet = SelfCertifiedDataSetBuilder.Build(receiptRequest, response, _configuration, request.ChainCounter, previousSignature, request.PeriodTotals, FRStateData.CopyNumber(response));
 
         var signature = _signatureCreator.Sign(dataSet);
 

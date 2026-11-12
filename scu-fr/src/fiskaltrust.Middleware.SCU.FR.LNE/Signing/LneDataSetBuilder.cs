@@ -25,7 +25,7 @@ internal static class LneDataSetBuilder
     /// <summary>Field separator. Never appears in the values: identifiers, numbers and moments, and issuer claims that <see cref="LneConfiguration"/> rejects when they contain it.</summary>
     public const char FieldSeparator = '|';
 
-    public static string Build(ReceiptRequest request, ReceiptResponse response, LneConfiguration configuration, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null, int? copyNumber = null, FRArchiveBoundaries? archive = null)
+    public static string Build(ReceiptRequest request, ReceiptResponse response, LneConfiguration configuration, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null, int? copyNumber = null)
     {
         // A separator inside a field would shift every later field of the signed data set.
         FRIssuerClaims.RejectCharacter("LNE", nameof(response.ftCashBoxIdentification), response.ftCashBoxIdentification, FieldSeparator);
@@ -64,11 +64,10 @@ internal static class LneDataSetBuilder
             Amount(chargeItems.Sum(x => x.Amount)),
             VatBreakdown(chargeItems),
             PaymentBreakdown(payItems),
-            // market-fr#221: the boundaries an archive receipt signs, as v1.2; empty on every other
-            // receipt. Placed before the period totals so the fields read from the end keep their place.
-            FRArchiveBoundaries.SignedField(archive),
-            // TODO pending Louis (market-fr ADR 0003): where this data set carries the migration event of a
-            // finish-migration receipt (0x4022), field 20 reused or a 26th field. Until then it is not signed here.
+            // market-fr#221, archive-v2 §5: chosen by the receipt case (field 13): the archive boundaries on 0x3011,
+            // the migration event on 0x4022 (ADR 0003), the closed periods and their starts on the closings and the
+            // queue stop; empty elsewhere. Placed before the period totals so the fields read from the end keep their place.
+            FRSignedRecords.Field20(request, response),
             PeriodTotals(periodTotals),
             configuration.CertificateSerialNumber,
             // ADR 0001: the chain counter, the start-of-chain flag and the previous entry's

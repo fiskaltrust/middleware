@@ -157,6 +157,22 @@ public class FRStateClosing
     /// <summary>The closing receipt's own moment. Absent when the receipt closes no period.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? PeriodEnd { get; set; }
+
+    /// <summary>
+    /// Every period the receipt closes, its own and the shorter ones it ends (<see cref="Logic.FRPeriodTotalsAccumulator.PeriodsClosedBy"/>),
+    /// shortest first, each with where its totals started. The LNE and self-certified SCUs sign them in data-set field 20 on the
+    /// closings and the queue stop (archive-v2 §5). Absent when the receipt closes no period.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<FRStateClosedPeriod>? Periods { get; set; }
+}
+
+/// <summary>One closed period: <c>Shift</c>, <c>Day</c>, <c>Month</c> or <c>Year</c>, and where its totals started.</summary>
+public class FRStateClosedPeriod
+{
+    public string Period { get; set; } = "";
+
+    public DateTime Start { get; set; }
 }
 
 /// <summary>Totals TTC by VAT case and by pay-item class, named as the archive columns.</summary>

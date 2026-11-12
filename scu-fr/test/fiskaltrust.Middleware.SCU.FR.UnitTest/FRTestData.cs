@@ -61,6 +61,7 @@ public static class FRTestData
     public static ProcessRequest Archive(bool asJson = true)
     {
         var request = Request();
+        request.ReceiptRequest.ftReceiptCase = ((ReceiptCase) 0x3011).WithCountry("FR");
         var boundaries = new FRArchiveBoundaries
         {
             PreviousArchiveQueueItemId = PreviousArchive,

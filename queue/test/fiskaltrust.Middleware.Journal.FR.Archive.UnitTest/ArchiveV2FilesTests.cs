@@ -279,6 +279,24 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
+        public async Task ClosingJournals_ReadThePeriodStartFromField20WhenSigned()
+        {
+            // archive-v2 §5, market-fr#221: a monthly closing signs the day and the month it closes, shortest first.
+            var id = Guid.NewGuid();
+            var field20 = "Day,2026-11-29T22:00:00.0000000Z;Month,2026-10-31T22:00:00.0000000Z";
+            var dataSet = $"12345678901234||||||{QueueId}|{id}||cashbox-fr|ft1#M1|2026-11-30T22:00:00.0000000Z|4652200000002012||0|EUR|0.00|||{field20}||SERIAL-1|1|N|";
+            var state = "{\"FR\":{\"Closing\":{\"ClosingType\":\"monthly\",\"PeriodStart\":\"2026-10-01T00:00:00.0000000Z\",\"PeriodEnd\":\"2026-11-30T22:00:00.0000000Z\"}}}";
+            var m1 = ArchiveEntry.Read(id, QueueId, 1, Request(0x4652_2000_0000_2012), Response("ft1#M1", dataSet + ".sig", stateData: state))!;
+            var unsigned = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 2, Request(0x4652_2000_0000_2012), Response("ft1#M2", "m2", stateData: state))!;
+
+            var monthly = Rows(await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x00E)!), m1, unsigned));
+
+            m1.SignedPeriodStart.Should().Be(new DateTime(2026, 10, 31, 22, 0, 0, DateTimeKind.Utc));
+            monthly[0]["PeriodStart"].Should().Be("2026-10-31T22:00:00.0000000Z", "the signed start of the month wins over the stored one");
+            monthly[1]["PeriodStart"].Should().Be("2026-10-01T00:00:00.0000000Z", "without a signed field 20, the stored start");
+        }
+
+        [Fact]
         public async Task SignaturesAndJet_HaveOneRowPerItemAndPerJetEvent()
         {
             var jetRequest = "{\"ftReceiptCase\":" + 0x4652_2000_0000_3001L + ",\"cbUser\":\"op1\",\"ftReceiptCaseData\":{\"fr\":{\"code\":50,\"Message\":\"Clôture\",\"Information\":\"jour\"}}}";

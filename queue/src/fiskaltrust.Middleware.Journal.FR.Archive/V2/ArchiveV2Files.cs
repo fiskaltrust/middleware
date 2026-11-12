@@ -349,7 +349,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> ClosingPeriodColumns = new[]
         {
             Col("ClosingType", e => ClosingText(e, "ClosingType"), "Type de clôture : zero (reçu zéro), shift (service), daily (jour), monthly (mois), yearly (année ou exercice), lifecycle (mise en service, mise hors service et autres opérations techniques). Avec PeriodStart et PeriodEnd, identifie la période close."),
-            Col("PeriodStart", e => ClosingMoment(e, "PeriodStart"), "Début (UTC) de la période close : la clôture précédente de même période, ou la mise en service de la caisse. Non signé ; vide si le document ne clôt aucune période."),
+            Col("PeriodStart", e => (object?) e.SignedPeriodStart ?? ClosingMoment(e, "PeriodStart"), "Début (UTC) de la période close : la clôture précédente de même période, ou la mise en service de la caisse. Signé (champ 20 du jeu de données LNE) ; non signé par InfoCert jusqu'au format R13 ; vide si le document ne clôt aucune période."),
             Col("PeriodEnd", e => ClosingMoment(e, "PeriodEnd"), "Fin (UTC) de la période close : le moment du document de clôture. Non signé ; vide si le document ne clôt aucune période."),
         };
 
