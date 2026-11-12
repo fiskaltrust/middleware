@@ -135,16 +135,104 @@ public class FRArchiveSignedLinksTests : IDisposable
         Start(new ftQueueFR { ALastQueueItemId = Guid.NewGuid(), ANumerator = 3, ALastSignature = "a3-signature" });
         await SignAsync(CashSale());
 
-        var request = CashSale();
-        request.ftReceiptCase = ((ReceiptCase) 0x3011).WithCountry("FR"); // 0x3011: archive receipt
-        request.cbChargeItems = [];
-        request.cbPayItems = [];
-        var response = JsonSerializer.Deserialize<ReceiptResponse>(await _signProcessor(JsonSerializer.Serialize(request)))!;
+        var response = await SignUncheckedAsync(ArchiveRequest());
 
         response.ftState.IsState(State.Error).Should().BeTrue();
         response.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature));
         JsonSerializer.Serialize(response.ftSignatures).Should().Contain("previous archive receipt");
         Rows(await ReadAsync(JournalTypeFR.Archive)).Should().BeEmpty("no archive receipt was signed");
+    }
+
+    [Fact]
+    public async Task ArchiveReceipt_StartsItsRangeOnTheFirstSignedEntry_SkippingUnsignedAndFailedItems()
+    {
+        Start(new ftQueueFR());
+        await SignAsync(CashSale());
+        await SignAsync(ArchiveRequest());
+        // An item whose processing stopped before a response, and an error response (0x4652_2000_EEEE_EEEE: FR v2 error state).
+        await StoreItemAsync(response: null);
+        await StoreItemAsync(response: "{\"ftReceiptIdentification\":\"ft9#\",\"ftReceiptMoment\":\"" + DateTime.UtcNow.ToString("o") + "\",\"ftState\":" + unchecked((long) 0x4652_2000_EEEE_EEEE) + ",\"ftSignatures\":[]}");
+        var sale = await SignAsync(CashSale());
+
+        var archive = await SignAsync(ArchiveRequest());
+
+        var boundaries = SCU.FR.Abstraction.Helpers.FRStateData.Archive(archive)!;
+        boundaries.FirstContainedReceiptQueueItemId.Should().Be(sale.ftQueueItemID, "the first contained record is the first signed entry after the previous archive receipt");
+        boundaries.FirstContainedReceiptMoment.Should().Be(sale.ftReceiptMoment);
+    }
+
+    [Fact]
+    public async Task ArchiveReceipt_RightAfterThePreviousOne_ContainsOnlyItself()
+    {
+        Start(new ftQueueFR());
+        await SignAsync(CashSale());
+        await SignAsync(ArchiveRequest());
+        await StoreItemAsync(response: null);
+
+        var archive = await SignAsync(ArchiveRequest());
+
+        var boundaries = SCU.FR.Abstraction.Helpers.FRStateData.Archive(archive)!;
+        boundaries.FirstContainedReceiptQueueItemId.Should().Be(archive.ftQueueItemID);
+        boundaries.FirstContainedReceiptMoment.Should().Be(archive.ftReceiptMoment);
+    }
+
+    [Fact]
+    public async Task ArchiveReceipt_IsRefused_WhenThePreviousArchiveReceiptCannotBeRead()
+    {
+        var previous = Guid.NewGuid();
+        Start(new ftQueueFR { ALastQueueItemId = previous, ANumerator = 3, ALastSignature = "a3-signature" });
+        await StoreItemAsync(response: "{\"ftReceiptIdentification\":", id: previous);
+        await SignAsync(CashSale());
+
+        var response = await SignUncheckedAsync(ArchiveRequest());
+
+        response.ftState.IsState(State.Error).Should().BeTrue();
+        response.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature));
+        JsonSerializer.Serialize(response.ftSignatures).Should().Contain("previous archive receipt").And.Contain("cannot be read");
+    }
+
+    [Fact]
+    public async Task ArchiveReceipt_IsRefused_WhenAnEntryOfItsRangeCannotBeRead()
+    {
+        Start(new ftQueueFR());
+        await SignAsync(CashSale());
+        await SignAsync(ArchiveRequest());
+        await StoreItemAsync(response: "{\"ftSignatures\":[");
+        await SignAsync(CashSale());
+
+        var response = await SignUncheckedAsync(ArchiveRequest());
+
+        response.ftState.IsState(State.Error).Should().BeTrue();
+        response.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature));
+        JsonSerializer.Serialize(response.ftSignatures).Should().Contain("cannot be read");
+    }
+
+    private async Task StoreItemAsync(string? response, Guid? id = null)
+    {
+        var repository = await _storageProvider.CreateMiddlewareQueueItemRepository();
+        var rows = (await repository.GetAsync()).Select(q => q.ftQueueRow).DefaultIfEmpty(0).Max();
+        await repository.InsertOrUpdateAsync(new ftQueueItem
+        {
+            ftQueueItemId = id ?? Guid.NewGuid(),
+            ftQueueId = _queueId,
+            ftQueueRow = rows + 1,
+            ftQueueMoment = DateTime.UtcNow,
+            request = JsonSerializer.Serialize(CashSale()),
+            response = response,
+            TimeStamp = DateTime.UtcNow.Ticks,
+        });
+    }
+
+    private async Task<ReceiptResponse> SignUncheckedAsync(ReceiptRequest request)
+        => JsonSerializer.Deserialize<ReceiptResponse>(await _signProcessor(JsonSerializer.Serialize(request)))!;
+
+    private ReceiptRequest ArchiveRequest()
+    {
+        var request = CashSale();
+        request.ftReceiptCase = ((ReceiptCase) 0x3011).WithCountry("FR"); // 0x3011: archive receipt
+        request.cbChargeItems = [];
+        request.cbPayItems = [];
+        return request;
     }
 
     /// <summary>A v1.2 ticket stored before the handover: v1 signature types (0x4652_0000_0000_0001, v1 receipt signature).</summary>
