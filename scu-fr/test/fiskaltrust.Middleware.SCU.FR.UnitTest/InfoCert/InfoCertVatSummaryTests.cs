@@ -114,6 +114,29 @@ public class InfoCertVatSummaryTests
         lines[1].Data.Should().Be("HT 5.21 | TVA 0.29 | TTC 5.50");
     }
 
+    /// <summary>
+    /// R13 v4.2 marks the VAT summary I (forbidden) on a note, a pro forma and an order, which are not the sale's receipt
+    /// (NF525 V2.3 §6.2.2.3; [02], [07 §12]). The signed content is unchanged: only the printed items are left out.
+    /// </summary>
+    [Theory]
+    [InlineData(0x0006)]
+    [InlineData(0x0007)]
+    [InlineData(0x3004)]
+    [InlineData(0x0002_0006)]
+    public async Task ProcessReceiptAsync_PrintsNoSummaryOnAPreTransactionDocument(long receiptCase)
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new InfoCertFRSSCD(new InfoCertConfiguration { Siret = FRTestData.Siret, PrivateKey = privateKey, CertificateSerialNumber = "CERT-4711" });
+        var request = FRTestData.Request();
+        request.ReceiptRequest.ftReceiptCase = (fiskaltrust.ifPOS.v2.Cases.ReceiptCase) (0x4652_2000_0000_0000 | receiptCase);
+
+        var (response, signature) = await sut.ProcessReceiptAsync(request, null);
+
+        signature.Should().NotBeEmpty();
+        response.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.VatSummary));
+    }
+
     [Fact]
     public async Task ProcessReceiptAsync_LneProducesNoSummary()
     {

@@ -134,14 +134,21 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         response.AddPeriodTotalsItems(request.PeriodTotals);
 
         // The VAT summary is printed on the receipt (R13 v4.2 Récapitulatif), so it travels as
-        // signature items (ADR 0011), one per rate.
-        foreach (var (rate, line) in InfoCertVatSummary.From(receiptRequest) ?? new Dictionary<string, InfoCertVatRate>())
+        // signature items (ADR 0011), one per rate. R13 forbids it (I) on a note, a pro forma and an
+        // order, which are not the sale's receipt (NF525 V2.3 §6.2.2.3); what is signed is unchanged.
+        if (!PrintsNoVatSummary(receiptRequest))
         {
-            response.AddSignatureItem(SignatureTypeFR.VatSummary, $"TVA {rate} %", InfoCertVatSummary.Format(line));
+            foreach (var (rate, line) in InfoCertVatSummary.From(receiptRequest) ?? new Dictionary<string, InfoCertVatRate>())
+            {
+                response.AddSignatureItem(SignatureTypeFR.VatSummary, $"TVA {rate} %", InfoCertVatSummary.Format(line));
+            }
         }
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
+
+    /// <summary>A note (0x0006), a pro forma (0x0007) or an order (0x3004), training or not.</summary>
+    private static bool PrintsNoVatSummary(ReceiptRequest request) => ((long) request.ftReceiptCase & 0xFFFF) is 0x0006 or 0x0007 or 0x3004;
 
     public Task<FRSigningCertificate> GetSigningCertificateAsync()
         => Task.FromResult(FRHashSigning.SigningCertificate(_signer.Key, _configuration.CertificateBase64, _configuration.CertificateSerialNumber, CertificationBody));
