@@ -99,6 +99,19 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                     lines.Add($"  {journal.Letter}  {journal.FrenchName,-42} {journal.FileName}");
                 }
                 lines.Add("");
+                Para("Un fichier généré d'office à la limite d'un an (entrée ForcedArchive du journal des actions, "
+                    + "closedBy = yearLimit) se termine, comme toute archive, sur la dernière clôture journalière signée "
+                    + "avant la limite ; les documents suivants vont au fichier ouvert suivant. Ce n'est que si le fichier "
+                    + "ne contient aucune clôture journalière avant la limite qu'il se termine sur le dernier document avant "
+                    + "elle. Le système de caisse en est informé par un événement JET 30 en attente (MessageIsPending).");
+                Para("La file signale une archive due par l'option ArchiveIsDue (0x0800) de ftState, chaque mois, et un "
+                    + "événement JET en attente par MessageIsPending (0x0040) ; le système de caisse doit y donner suite "
+                    + "(section 5.9).");
+                Para("Conservation : cette archive doit être conservée sur un support externe (support amovible ou "
+                    + "stockage distinct de la caisse), pendant la durée légale de conservation.");
+                Para("Clôtures : le logiciel ne bénéficie pas de la dispense de clôture. Les périodes sont closes par "
+                    + "les clôtures journalières, mensuelles et annuelles, et chaque reçu d'archive clôt lui-même le jour "
+                    + "avant l'archivage.");
                 Para("Les fichiers se joignent par ftQueueItemID (identifiant du document), présent dans chaque "
                     + "fichier ; ftReceiptIdentification permet de contrôler la jointure. Une ligne d'article se "
                     + "joint à ses données complémentaires de case-data.csv par ftQueueItemID et Position, avec "
@@ -201,6 +214,20 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 Para("Codes du dictionnaire des événements techniques (référentiel NF525, R19) ; les codes 900 et "
                     + "plus sont propres à l'éditeur.");
                 foreach (var (code, label) in JetCodes) Def(code, label);
+                lines.AddRange(new[] { "", "== 5.7 Formats d'éléments de signature (colonne ftSignatureFormat de signatures.csv) ==", "" });
+                Para("Le format dit comment lire Data ; les deux derniers chiffres hexadécimaux :");
+                foreach (var (code, label) in SignatureFormats) Def(code, label);
+                lines.AddRange(new[] { "", "== 5.8 Valeurs de DocumentType, OperationType et ClosingType ==", "" });
+                Def("DocumentType", "ticket (ticket de caisse), payment-proof (justificatif de paiement), invoice (facture), "
+                    + "receipt-without-obligation (ticket sans obligation de délivrance), delivery-note (bon de livraison), "
+                    + "note (addition), pro-forma (facture pro forma), order (commande). Un document en mode école a la "
+                    + "nature du document qu'il simule.");
+                Def("OperationType", "sale (vente), refund (remboursement), void (annulation).");
+                Def("ClosingType", "zero (ticket zéro), shift (service), daily (jour), monthly (mois), yearly (année ou "
+                    + "exercice), lifecycle (mise en service, mise hors service, changement de module de signature, migration).");
+                lines.AddRange(new[] { "", "== 5.9 Options de ftState ==", "" });
+                Para("4 derniers chiffres hexadécimaux de ftState (une valeur se terminant par EEEE_EEEE est une erreur) :");
+                foreach (var (code, label) in StateFlags) Def(code, label);
                 lines.Add("");
             }));
 
@@ -217,8 +244,15 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                     + "et ChainCounter augmente de 1 sans trou. manifest.json (chainAnchors) donne le point de "
                     + "départ de chaque chaîne dans ce fichier ; il prolonge le dernier document de la chaîne dans "
                     + "le fichier précédent.");
-                Item("Requêtes : l'empreinte RequestHash se recalcule à partir de requests.jsonl, selon la forme "
-                    + "canonique documentée par fiskaltrust.");
+                Item("Requêtes : RequestHash vaut « version:empreinte », par exemple 1:BozY0lCYu+j8QaPRf6AmbAejdx+6pThYb3Bu3WdgZhA=. "
+                    + "L'empreinte est le SHA-256, en Base64 avec remplissage, de la requête de requests.jsonl écrite sous "
+                    + "sa forme canonique, version 1 : UTF-8 sans BOM et sans espace entre les éléments ; seuls les "
+                    + "membres du contrat ifPOS v2 sont écrits, sous leur nom, en ordre croissant des noms (unités UTF-16, "
+                    + "RFC 8785) ; un membre nul ou absent est omis, ainsi que cbChargeItems et cbPayItems vides ; les "
+                    + "chaînes n'échappent que \", \\ et les caractères de contrôle ; les nombres sont écrits en notation "
+                    + "décimale exacte sans exposant, sans zéro inutile (7.40 devient 7.4) ; les codes ft…Case en entier "
+                    + "non signé décimal. Les règles complètes sont publiées par fiskaltrust (forme canonique version 1, "
+                    + "ADR 0013) et appliquées par TaxAuditorTool.");
                 Item("Outil : l'outil fiskaltrust TaxAuditorTool réalise tous ces contrôles.");
                 lines.Add("");
             }));
@@ -281,19 +315,24 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         {
             ("0x0000", "ticket, type non précisé"), ("0x0001", "ticket de caisse"), ("0x0002", "justificatif de paiement"),
             ("0x0003", "ticket sans obligation de délivrance"), ("0x0004", "vente à distance (e-commerce)"), ("0x0005", "bon de livraison"),
+            ("0x0006", "note (addition, document provisoire)"), ("0x0007", "facture pro forma"),
             ("0x1000", "facture, type non précisé"), ("0x1001", "facture à un particulier"), ("0x1002", "facture à une entreprise"),
-            ("0x1003", "facture à une administration"), ("0x2000", "ticket zéro (sans vente)"), ("0x2001", "ticket de contrôle"),
+            ("0x1003", "facture à une administration"), ("0x2000", "ticket zéro (sans vente)"), ("0x2001", "(réservé) un reçu, traité comme un ticket zéro"),
             ("0x2010", "clôture de service"), ("0x2011", "clôture journalière"), ("0x2012", "clôture mensuelle"),
             ("0x2013", "clôture annuelle"), ("0x3000", "protocole, non précisé"), ("0x3001", "événement technique (JET)"),
             ("0x3002", "événement comptable"), ("0x3003", "consommation interne"), ("0x3004", "commande (note)"),
             ("0x3005", "paiement (justificatif)"), ("0x3010", "duplicata d'un document existant"),
+            ("0x3011", "reçu d'archive : clôt le jour et la période d'archivage, chaîne A"),
             ("0x4001", "mise en service"), ("0x4002", "mise hors service"),
+            ("0x4011", "début d'un changement de module de signature"), ("0x4012", "fin d'un changement de module de signature"),
+            ("0x4021", "début de la migration depuis la version 1.2"), ("0x4022", "fin de la migration : événement de migration signé"),
         };
 
         private static readonly (string, string)[] ReceiptFlags =
         {
             ("0x10000", "signature différée (document enregistré hors ligne)"), ("0x20000", "mode école (formation)"),
             ("0x40000", "annulation"), ("0x80000", "document manuscrit"), ("0x1000000", "remboursement"),
+            ("0x8000000", "regroupement par numéro de position (article composé : une ligne de vente par groupe)"),
         };
 
         private static readonly (string, string)[] VatCases =
@@ -316,9 +355,26 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         {
             ("0x0000", "mention imprimée (information)"), ("0x0001", "QR code de signature du document"),
             ("0x0003", "totaux du jour"), ("0x0004", "totaux du mois"), ("0x0005", "totaux de l'année"),
-            ("0x0007", "totaux perpétuels"), ("0x0008", "empreinte de chaînage"), ("0x0009", "numéro SIRET"),
+            ("0x0006", "totaux de la période d'archivage (reçu d'archive)"), ("0x0007", "totaux perpétuels"),
+            ("0x000A", "mention de certification : organisme et numéro de certificat, sur chaque document signé"),
+            ("0x000C", "ligne du récapitulatif de TVA (HT, TVA et TTC d'un taux)"), ("0x000D", "totaux du service clos (clôture de service)"), ("0x0008", "empreinte de chaînage"), ("0x0009", "numéro SIRET"),
             ("0x000B", "document enregistré non signé"), ("0x0010", "mise en service"), ("0x0011", "mise hors service"),
             ("0x0012", "événement JET à transmettre"),
+        };
+
+        private static readonly (string, string)[] SignatureFormats =
+        {
+            ("0x00", "non précisé"), ("0x01", "texte"), ("0x02", "lien"), ("0x03", "QR code"), ("0x04", "code-barres Code 128"),
+            ("0x05", "OCR-A"), ("0x06", "PDF417"), ("0x07", "Data Matrix"), ("0x08", "Aztec"), ("0x09", "code-barres EAN-8"),
+            ("0x0A", "code-barres EAN-13"), ("0x0B", "code-barres UPC-A"), ("0x0C", "code-barres Code 39"), ("0x0D", "Base64"),
+        };
+
+        private static readonly (string, string)[] StateFlags =
+        {
+            ("0x0008", "mode de signature différée actif"),
+            ("0x0040", "MessageIsPending : un événement JET attend d'être transmis ; le système de caisse le lit avec un ticket zéro (0x2000) et l'envoie en événement technique (0x3001)"),
+            ("0x0100", "clôture journalière due"), ("0x0200", "clôture mensuelle due"), ("0x0400", "clôture annuelle due"),
+            ("0x0800", "ArchiveIsDue : une archive est due, le premier enregistrement du fichier ouvert date d'un mois précédent ; le système de caisse émet un reçu d'archive (0x3011)"),
         };
 
         private static readonly (string, string)[] JetCodes =

@@ -298,7 +298,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             Col("PrintCount", e => null, "Nombre d'impressions du document original. Vide : sa source n'est pas encore décidée ; les duplicatas sont sur la chaîne D."),
             // TODO pending decision: the source of GuestCount (no request field carries it).
             Col("GuestCount", e => null, "Nombre de couverts (restauration). Vide : aucun champ de la requête ne le porte encore."),
-            Col("DocumentType", e => StateText(e, "DocumentType"), "Nature du document (liste 5.6) : ticket, payment-proof, invoice, receipt-without-obligation, delivery-note, note, pro-forma ou order ; un document en mode école a la nature du document qu'il simule."),
+            Col("DocumentType", e => StateText(e, "DocumentType"), "Nature du document (liste 5.8) : ticket, payment-proof, invoice, receipt-without-obligation, delivery-note, note, pro-forma ou order ; un document en mode école a la nature du document qu'il simule."),
             Col("OperationType", e => StateText(e, "OperationType"), "Nature de l'opération : sale (vente), refund (remboursement) ou void (annulation), selon les options de ftReceiptCase."),
             Col("TrainingMention", TrainingMention, "Sur la chaîne X : la mention imprimée du mode école."),
             Col("ManagerId", e => CaseDataFR(e.Request, "ftReceiptCaseData", "ManagerId"), "Sur la chaîne X : identifiant du responsable de l'opérateur en mode école."),
