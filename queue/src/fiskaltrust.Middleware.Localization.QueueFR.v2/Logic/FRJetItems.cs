@@ -25,6 +25,9 @@ public static class FRJetItems
     public const int DegradedModeStart = 70;
     public const string DegradedModeStartLabel = "Début de mode dégradé";
 
+    public const int DataExport = 110;
+    public const string DataExportLabel = "Exportation de données";
+
     public const int DegradedModeEnd = 120;
     public const string DegradedModeEndLabel = "Fin de mode dégradé";
 

@@ -15,7 +15,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest.Scenario
 
 /// <summary>
 /// A local archive export checks the chains of the entries it exports (market-fr ADR 0009, #208): a broken link
-/// raises JET 90, a gap in a chain's counters JET 95, each as a pending JET event. The export is still delivered.
+/// raises JET 90, a gap in a chain's counters JET 95, each as a pending JET event. The export is still delivered, and
+/// raises JET 110 (contract §6).
 /// </summary>
 public class FRExportIntegrityTests : IDisposable
 {
@@ -31,7 +32,7 @@ public class FRExportIntegrityTests : IDisposable
     public void Dispose() => _scu.Dispose();
 
     [Fact]
-    public async Task IntactChains_RaiseNothing()
+    public async Task IntactChains_RaiseNoIntegrityEvent_OnlyTheExportEvent()
     {
         var from = DateTime.UtcNow;
         await SignAsync(CashSale());
@@ -39,8 +40,7 @@ public class FRExportIntegrityTests : IDisposable
 
         (await ExportAsync(from)).Should().NotBeEmpty();
 
-        (await PendingAsync()).Should().BeEmpty();
-        (await SignAsync(CashSale())).ftState.IsFlag(StateFlags.MessageIsPending).Should().BeFalse();
+        (await PendingAsync()).Select(x => x.Type).Should().Equal(new[] { "110-JetPending" }, "every local archive export raises JET 110 (contract §6)");
     }
 
     /// <summary>A stored entry tampered with afterwards no longer links to the entry before it.</summary>
@@ -59,8 +59,8 @@ public class FRExportIntegrityTests : IDisposable
         (await ExportAsync(from)).Should().NotBeEmpty("the export is reported on, not refused");
 
         var pending = await PendingAsync();
-        pending.Select(x => x.Type).Should().Equal("90-JetPending");
-        pending[0].DataJson.Should().Contain("chain=T").And.Contain(second.ftReceiptIdentification);
+        pending.Select(x => x.Type).Should().BeEquivalentTo("90-JetPending", "110-JetPending");
+        pending.Single(x => x.Type == "90-JetPending").DataJson.Should().Contain("chain=T").And.Contain(second.ftReceiptIdentification);
         (await SignAsync(CashSale())).ftState.IsFlag(StateFlags.MessageIsPending).Should().BeTrue();
     }
 
@@ -78,9 +78,62 @@ public class FRExportIntegrityTests : IDisposable
         (await ExportAsync(from)).Should().NotBeEmpty("the export is reported on, not refused");
 
         var pending = await PendingAsync();
-        pending.Select(x => x.Type).Should().Equal("95-JetPending");
-        pending[0].DataJson.Should().Contain("chain=T").And.Contain("expected=2").And.Contain("found=3");
+        pending.Select(x => x.Type).Should().BeEquivalentTo("95-JetPending", "110-JetPending");
+        pending.Single(x => x.Type == "95-JetPending").DataJson.Should().Contain("chain=T").And.Contain("expected=2").And.Contain("found=3");
         (await SignAsync(CashSale())).ftState.IsFlag(StateFlags.MessageIsPending).Should().BeTrue();
+    }
+
+    /// <summary>
+    /// JET 110 (R19 "Exportation de données") on a local export of fiscal data (contract §6): the archive export
+    /// (0x4652_2000_0000_0010) and the L log journal (0x4652_2000_0000_0009), returned on the next zero receipt.
+    /// </summary>
+    [Fact]
+    public async Task AnArchiveExport_RaisesAPendingJet110_ReturnedOnTheNextZeroReceipt()
+    {
+        var from = DateTime.UtcNow;
+        await SignAsync(CashSale());
+
+        (await ExportAsync(from)).Should().NotBeEmpty();
+
+        var pending = (await PendingAsync()).Should().ContainSingle().Which;
+        pending.Type.Should().Be("110-JetPending");
+        pending.DataJson.Should().Contain("Exportation de donn").And.Contain("ftJournalType=0x4652200000000010").And.Contain("file=");
+        var zero = await SignAsync(Request(ReceiptCase.ZeroReceipt0x2000));
+        zero.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypeFR.JetEvent)).Select(x => JsonDocument.Parse(x.Data).RootElement.GetProperty("FR").GetProperty("Code").GetString())
+            .Should().Equal("110");
+    }
+
+    [Fact]
+    public async Task ALogJournalExport_RaisesJet110_AnotherJournalExportDoesNot()
+    {
+        var from = DateTime.UtcNow;
+        await SignAsync(CashSale());
+
+        await JournalAsync(JournalTypeFR.Ticket, from);
+        (await PendingAsync()).Should().BeEmpty("only the archive and the JET (L) exports raise 110");
+
+        await JournalAsync(JournalTypeFR.Log, from);
+        (await PendingAsync()).Should().ContainSingle().Which.DataJson.Should().Contain("ftJournalType=0x4652200000000009");
+    }
+
+    [Fact]
+    public async Task ARefusedArchiveExport_RaisesNothing()
+    {
+        await SignAsync(CashSale());
+        var from = DateTime.UtcNow.AddSeconds(1);
+
+        var act = () => ExportAsync(from);
+
+        await act.Should().ThrowAsync<Exception>("the period holds no receipt");
+        (await PendingAsync()).Should().BeEmpty();
+    }
+
+    private async Task<byte[]> JournalAsync(JournalTypeFR journalType, DateTime from)
+    {
+        var (_, reader) = await _journal(JsonSerializer.Serialize(new JournalRequest { ftJournalType = journalType.As<JournalType>(), From = from.Ticks }));
+        using var buffer = new MemoryStream();
+        await reader.CopyToAsync(buffer);
+        return buffer.ToArray();
     }
 
     private void Start()
@@ -128,6 +181,18 @@ public class FRExportIntegrityTests : IDisposable
         var signature = response.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data;
         return signature[(signature.LastIndexOf('.') + 1)..];
     }
+
+    private ReceiptRequest Request(ReceiptCase receiptCase) => new()
+    {
+        ftCashBoxID = _cashBoxId,
+        cbTerminalID = "1",
+        cbReceiptReference = Guid.NewGuid().ToString("N")[..8],
+        cbReceiptMoment = DateTime.UtcNow,
+        Currency = Currency.EUR,
+        ftReceiptCase = receiptCase.WithCountry("FR"),
+        cbChargeItems = [],
+        cbPayItems = [],
+    };
 
     private ReceiptRequest CashSale() => new()
     {
