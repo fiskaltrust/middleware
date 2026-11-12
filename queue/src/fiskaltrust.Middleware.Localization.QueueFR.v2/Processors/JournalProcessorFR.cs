@@ -64,6 +64,8 @@ public class JournalProcessorFR : IJournalProcessor
     private readonly Func<Task<IArchiveSigner>>? _archiveSigner;
     private readonly Func<Task<FRSSCDInfo?>>? _scuInfo;
     private readonly string? _validationLevel;
+    private readonly FRChainStateProvider? _chains;
+    private readonly AsyncLazy<IMiddlewareActionJournalRepository> _actionJournalRepository;
 
     /// <param name="archiveSigner">
     /// Creates the signer of an archive export, per export: the queue's SCU (<see cref="ScuArchiveSigner"/>, ADR 0007 amendment).
@@ -71,8 +73,15 @@ public class JournalProcessorFR : IJournalProcessor
     /// </param>
     /// <param name="scuInfo">The SCU's non-secret configuration, joined to the archive as compliance parameters (archive-v2 §12).</param>
     /// <param name="validationLevel">The queue's <c>ValidationLevel</c> as configured, or null when it is not configured (FR then applies <c>Error</c>).</param>
-    public JournalProcessorFR(Guid queueId, IStorageProvider storageProvider, Func<Task<IArchiveSigner>>? archiveSigner = null, Func<Task<FRSSCDInfo?>>? scuInfo = null, string? validationLevel = null)
+    /// <param name="chains">
+    /// The queue's chain state, through which a defect the archive export finds in its chains is raised as a pending JET
+    /// event (ADR 0009, #208). Null leaves the export unchecked.
+    /// </param>
+    public JournalProcessorFR(Guid queueId, IStorageProvider storageProvider, Func<Task<IArchiveSigner>>? archiveSigner = null, Func<Task<FRSSCDInfo?>>? scuInfo = null, string? validationLevel = null,
+        FRChainStateProvider? chains = null)
     {
+        _chains = chains;
+        _actionJournalRepository = storageProvider.CreateMiddlewareActionJournalRepository();
         _scuInfo = scuInfo;
         _queueId = queueId;
         _queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();
@@ -211,6 +220,7 @@ public class JournalProcessorFR : IJournalProcessor
                 string.Join("; ", files.Select(f => $"part {f.Part} {f.Period}, closed by {f.ClosedBy.ToManifestValue()}")) + ".");
         }
         var file = files[0];
+        await RaiseIntegrityDefectsAsync(file.Records).ConfigureAwait(false);
 
         metadata ??= new ArchiveMetadata(file.Records.Select(e => e.Siret).FirstOrDefault(s => !string.IsNullOrEmpty(s))
             ?? throw new InvalidOperationException("The archive manifest needs the SIRET, and neither the queue configuration nor the archived entries carry one."), DateTime.UtcNow);
@@ -223,6 +233,25 @@ public class JournalProcessorFR : IJournalProcessor
         await foreach (var chunk in ThroughTempFileAsync(stream => packager.WriteAsync(file, metadata, stream)).ConfigureAwait(false))
         {
             yield return chunk;
+        }
+    }
+
+    /// <summary>
+    /// Checks the chains of the exported entries (<see cref="FRChainIntegrity"/>) and raises each defect code once as a
+    /// pending JET event (ADR 0009, #208): the export is reported on, never refused. Only the links inside the file are
+    /// checked; its last entries are not compared with the chain state, which has moved on since a past period.
+    /// </summary>
+    private async Task RaiseIntegrityDefectsAsync(IEnumerable<ArchiveEntry> records)
+    {
+        if (_chains is null)
+        {
+            return;
+        }
+
+        var defects = FRChainIntegrity.Check(records.Select(e => ((ArchiveEntry?) e, (ArchiveEntryException?) null)), null);
+        foreach (var (code, label, information) in FRChainIntegrity.PerCode(defects))
+        {
+            await _chains.RaisePendingJetEventAsync(await _actionJournalRepository, code, label, information).ConfigureAwait(false);
         }
     }
 
