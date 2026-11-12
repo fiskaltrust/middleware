@@ -418,10 +418,52 @@ public class FRJournalExportTests : IDisposable
 
     private static List<Dictionary<string, string>> Rows(byte[] csv)
     {
-        // The test data holds no ';' or quote, so a plain split reads the file.
+        // The signed content carries ';' (fields 20 and 21 records), so a field may be quoted (CsvWriter); no field holds a line break.
         var lines = Encoding.UTF8.GetString(csv).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
-        var header = lines[0].Split(';');
-        return lines.Skip(1).Select(l => header.Zip(l.Split(';')).ToDictionary(p => p.First, p => p.Second)).ToList();
+        var header = Fields(lines[0]);
+        return lines.Skip(1).Select(l => header.Zip(Fields(l)).ToDictionary(p => p.First, p => p.Second)).ToList();
+    }
+
+    private static List<string> Fields(string line)
+    {
+        var fields = new List<string>();
+        var field = new StringBuilder();
+        var quoted = false;
+        for (var i = 0; i < line.Length; i++)
+        {
+            var c = line[i];
+            if (quoted)
+            {
+                if (c == '"' && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    field.Append('"');
+                    i++;
+                }
+                else if (c == '"')
+                {
+                    quoted = false;
+                }
+                else
+                {
+                    field.Append(c);
+                }
+            }
+            else if (c == '"')
+            {
+                quoted = true;
+            }
+            else if (c == ';')
+            {
+                fields.Add(field.ToString());
+                field.Clear();
+            }
+            else
+            {
+                field.Append(c);
+            }
+        }
+        fields.Add(field.ToString());
+        return fields;
     }
 
     private static string ChainedSignature(ReceiptResponse response)
