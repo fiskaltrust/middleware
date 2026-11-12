@@ -386,11 +386,25 @@ public class InfoCertFRSSCDTests
     }
 
     [Fact]
-    public void FromConfiguration_InASandbox_StartsWithoutTheMentionFields()
+    public void FromConfiguration_InASandbox_StartsWithoutAnAttestationNumber()
     {
-        var configuration = new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["sandbox"] = true };
+        var configuration = new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["sandbox"] = true, ["SoftwareCategory"] = "B", ["SoftwareVersion"] = "06.07" };
 
         InfoCertConfiguration.FromConfiguration(configuration).Sandbox.Should().BeTrue();
+    }
+
+    /// <summary>The category and the version are known before certification: a sandbox prints the mention too.</summary>
+    [Theory]
+    [InlineData("SoftwareCategory")]
+    [InlineData("SoftwareVersion")]
+    public void FromConfiguration_InASandbox_WithoutCategoryOrVersion_IsRejected(string key)
+    {
+        var configuration = new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["sandbox"] = true, ["SoftwareCategory"] = "B", ["SoftwareVersion"] = "06.07" };
+        configuration.Remove(key);
+
+        var act = () => InfoCertConfiguration.FromConfiguration(configuration);
+
+        act.Should().Throw<FRValidationException>().WithMessage($"*{key}*");
     }
 
     [Fact]

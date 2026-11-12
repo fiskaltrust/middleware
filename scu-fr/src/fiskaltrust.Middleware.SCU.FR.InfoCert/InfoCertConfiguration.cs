@@ -90,28 +90,26 @@ public class InfoCertConfiguration
             throw new FRValidationException($"The Infocert SCU SoftwareCategory must be A, B or C (NF525 V2.3 §2.1), not '{result.SoftwareCategory}'.");
         }
 
-        // Outside a sandbox every justificatif must carry the complete NF525 mention (NF525 V2.3 §6.1.6.1), so the SCU
-        // refuses to start without what the mention prints. A sandbox is not certified yet: it starts without them
-        // and, where it has a category and a version, prints "en cours de certif." in place of the attestation number.
-        if (!result.Sandbox)
+        // Every justificatif carries the complete NF525 mention (NF525 V2.3 §6.1.6.1), so the SCU refuses to start
+        // without what the mention prints. The category and the version are known before certification and are always
+        // required; only a sandbox, not certified yet, may lack the attestation number: it prints "en cours de certif."
+        // in its place.
+        var missing = new List<string>();
+        if (string.IsNullOrWhiteSpace(result.SoftwareCategory))
         {
-            var missing = new List<string>();
-            if (string.IsNullOrWhiteSpace(result.SoftwareCategory))
-            {
-                missing.Add(nameof(SoftwareCategory));
-            }
-            if (string.IsNullOrWhiteSpace(result.AttestationNumber))
-            {
-                missing.Add(nameof(AttestationNumber));
-            }
-            if (string.IsNullOrWhiteSpace(result.SoftwareVersion))
-            {
-                missing.Add(nameof(SoftwareVersion));
-            }
-            if (missing.Count > 0)
-            {
-                throw new FRValidationException($"The Infocert SCU requires {string.Join(", ", missing)} in its configuration outside a sandbox: every justificatif prints the NF525 mention (NF525 V2.3 §6.1.6.1).");
-            }
+            missing.Add(nameof(SoftwareCategory));
+        }
+        if (!result.Sandbox && string.IsNullOrWhiteSpace(result.AttestationNumber))
+        {
+            missing.Add(nameof(AttestationNumber));
+        }
+        if (string.IsNullOrWhiteSpace(result.SoftwareVersion))
+        {
+            missing.Add(nameof(SoftwareVersion));
+        }
+        if (missing.Count > 0)
+        {
+            throw new FRValidationException($"The Infocert SCU requires {string.Join(", ", missing)} in its configuration{(result.Sandbox ? "" : " outside a sandbox")}: every justificatif prints the NF525 mention (NF525 V2.3 §6.1.6.1).");
         }
 
         return result;
