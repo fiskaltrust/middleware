@@ -74,7 +74,7 @@ public class ReceiptValidationsFRTests
     public void PaymentProofs_TakeANotTaxableDrawerMoveChargeItem(long receiptCase, long chargeItemCase)
     {
         Errors(DrawerMove(receiptCase, chargeItemCase, 500m)).Should().BeEmpty();
-        Errors(DrawerMove(receiptCase, chargeItemCase, -500m)).Should().BeEmpty("France adds no sign rule; the shared NegativeAmounts decides");
+        Errors(DrawerMove(receiptCase, chargeItemCase, -500m)).Should().BeEmpty("France lets money leave the drawer (decision A8)");
     }
 
     [Theory]

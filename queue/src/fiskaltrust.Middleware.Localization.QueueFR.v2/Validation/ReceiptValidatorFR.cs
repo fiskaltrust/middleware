@@ -4,6 +4,7 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.Middleware.Localization.v2.Validation.Rules.Atoms.Customer;
+using fiskaltrust.Middleware.Localization.v2.Validation.Rules.Global;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.storage.V0;
@@ -125,6 +126,15 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
                 .WithErrorCode("TerminalIdRequired");
         }
 
+        // The shared NegativeAmounts rule with the French exemptions (ReceiptValidatorFR exempts the shared
+        // instance's codes): a down payment deducted on the final invoice as a negative line (flag 0x0008),
+        // and money leaving the drawer on a payment transfer or pay receipt (market-fr ADR 0016).
+        Include(new ChargeItemValidations.NegativeAmounts(NegativeSignAllowed));
+
+        // A handwritten receipt (flag 0x0008) is entered afterwards but enters the grand totals like any
+        // other (market-fr#221): it keeps the balance, VAT and description checks the shared rules skip for it.
+        Include(new HandwrittenReceiptChecksFR());
+
         // Table checks, pro formas and orders follow the shared v2 rules (market-fr ADR 0016): no
         // FR balance rule on 0x0006/0x0007, which the shared ReceiptBalance skips, and no internal
         // pay item required on a bill, as v1.2 required of its v0 0x08 bill.
@@ -155,6 +165,13 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
     /// </summary>
     private static bool CarriesOnlyDrawerMoveChargeItems(ReceiptCase receiptCase) => receiptCase.Case() is ReceiptCase.PaymentTransfer0x0002
         or ReceiptCase.Pay0x3005;
+
+    /// <summary>
+    /// A down-payment deduction (flag 0x0008), or a drawer-move charge item on a payment transfer (0x0002) or a
+    /// pay receipt (0x3005). Only there: a negative voucher on a sale is a redemption, which this rule does not decide.
+    /// </summary>
+    internal static bool NegativeSignAllowed(ReceiptRequest request, ChargeItem chargeItem) => chargeItem.IsDownpayment()
+        || (CarriesOnlyDrawerMoveChargeItems(request.ftReceiptCase) && IsDrawerMoveChargeItem(chargeItem));
 
     /// <summary>A not-taxable (V=8) cash transfer (S=A), receivable (S=9) or voucher (S=4) charge item.</summary>
     internal static bool IsDrawerMoveChargeItem(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.NotTaxable
@@ -201,7 +218,12 @@ public class ReceiptValidatorFR : MarketValidator, IMarketValidator
     /// v1.2 takes a pay-in, pay-out or transfer (v0 0x0A–0x0C, which the PosSystem API reaches from
     /// 0x0002) without a reference, such as the opening float of the day (market-fr#221).
     /// </summary>
-    protected override IReadOnlyCollection<string> ExemptGlobalErrorCodes { get; } = ["PaymentTransferMissingPreviousReceiptReference"];
+    /// <para>
+    /// The shared NegativeAmounts codes: <see cref="ReceiptValidationsFR"/> applies the same rule with the French
+    /// exemptions (down-payment deduction, drawer moves), which other markets do not take.
+    /// </para>
+    protected override IReadOnlyCollection<string> ExemptGlobalErrorCodes { get; } =
+        ["PaymentTransferMissingPreviousReceiptReference", "NegativeQuantityNotAllowed", "NegativeAmountNotAllowed"];
 
     /// <summary>
     /// A drawer-move charge item is not taxable (V=8) and carries no sale, so it has no nature of

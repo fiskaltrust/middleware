@@ -259,9 +259,12 @@ public class ChargeItemValidationsTests
         result.ShouldNotHaveAnyValidationErrors();
     }
 
-    /// <summary>The final invoice deducts the down payment received as a negative Downpayment line.</summary>
+    /// <summary>
+    /// A negative down-payment line (flag 0x0008) stays refused by the shared rule: France exempts it in its own
+    /// validator (market-fr#221, decision A8), the other markets keep the rule.
+    /// </summary>
     [Fact]
-    public void NegativeAmounts_DownpaymentDeduction_ShouldSkip()
+    public void NegativeAmounts_DownpaymentDeduction_StillFails()
     {
         var validator = new ChargeItemValidations.NegativeAmounts();
         var request = new ReceiptRequest
@@ -275,7 +278,7 @@ public class ChargeItemValidationsTests
             cbPayItems = []
         };
         var result = validator.TestValidate(request);
-        result.ShouldNotHaveAnyValidationErrors();
+        result.ShouldHaveValidationErrorFor("cbChargeItems[1].Amount").WithErrorCode("NegativeAmountNotAllowed");
     }
 
     private static ReceiptRequest WithOneItem(ReceiptCase receiptCase, long chargeItemCase, decimal amount) => new()
@@ -285,14 +288,29 @@ public class ChargeItemValidationsTests
         cbPayItems = []
     };
 
-    /// <summary>Money leaving the drawer: a negative not-taxable cash transfer, receivable or voucher.</summary>
+    /// <summary>
+    /// Money leaving the drawer (a negative not-taxable cash transfer, receivable or voucher) stays refused by the
+    /// shared rule; France exempts it in its own validator (market-fr#221, decision A8).
+    /// </summary>
     [Theory]
     [InlineData(ReceiptCase.PaymentTransfer0x0002, 0x00A8)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002, 0x0098)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002, 0x0048)]
     [InlineData(ReceiptCase.Pay0x3005, 0x00A8)]
-    public void NegativeAmounts_DrawerMoveOnAPaymentTransfer_ShouldSkip(ReceiptCase receiptCase, long chargeItemCase)
-        => new ChargeItemValidations.NegativeAmounts().TestValidate(WithOneItem(receiptCase, chargeItemCase, -500m)).ShouldNotHaveAnyValidationErrors();
+    public void NegativeAmounts_DrawerMoveOnAPaymentTransfer_StillFails(ReceiptCase receiptCase, long chargeItemCase)
+        => new ChargeItemValidations.NegativeAmounts().TestValidate(WithOneItem(receiptCase, chargeItemCase, -500m))
+            .ShouldHaveValidationErrorFor("cbChargeItems[0].Amount").WithErrorCode("NegativeAmountNotAllowed");
+
+    /// <summary>A market's exemption sees the receipt and the charge item.</summary>
+    [Fact]
+    public void NegativeAmounts_MarketExemption_SkipsTheItemsItNames()
+    {
+        var validator = new ChargeItemValidations.NegativeAmounts((request, item) => request.ftReceiptCase.IsCase(ReceiptCase.Pay0x3005) && item.Description == "Move");
+
+        validator.TestValidate(WithOneItem(ReceiptCase.Pay0x3005, 0x00A8, -500m)).ShouldNotHaveAnyValidationErrors();
+        validator.TestValidate(WithOneItem(ReceiptCase.PointOfSaleReceipt0x0001, 0x00A8, -500m))
+            .ShouldHaveValidationErrorFor("cbChargeItems[0].Amount").WithErrorCode("NegativeAmountNotAllowed");
+    }
 
     [Theory]
     [InlineData(ReceiptCase.PaymentTransfer0x0002, 0x00A3)] // taxed cash transfer
