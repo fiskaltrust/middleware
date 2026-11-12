@@ -75,7 +75,7 @@ public class FakeFRSSCD : IFRSSCD
                 ftSignatureType = (SignatureType) (long) Models.SignatureTypeFR.ReceiptSignature,
                 ftSignatureFormat = SignatureFormat.QRCode,
                 Caption = "www.fiskaltrust.fr",
-                Data = $"siret|{CertificateSerialNumber}|{request.ChainCounter}|N|{previousSignature}.{signature}",
+                Data = $"siret|{CertificateSerialNumber}|{request.ChainCounter}|{(string.IsNullOrEmpty(previousSignature) ? "N" : "O")}|{previousSignature}.{signature}",
             });
         }
 

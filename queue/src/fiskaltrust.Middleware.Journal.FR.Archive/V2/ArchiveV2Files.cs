@@ -5,6 +5,7 @@ using System.Text.Json;
 using fiskaltrust.Middleware.Journal.FR.Archive.Csv;
 using fiskaltrust.Middleware.Journal.FR.Archive.Model;
 using fiskaltrust.Middleware.Journal.FR.Archive.Packaging;
+using fiskaltrust.Middleware.Journal.FR.Archive.Signing;
 using fiskaltrust.Middleware.Journal.FR.Archive.Writing;
 
 namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
@@ -15,8 +16,11 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// <summary>T, P, I, B, X: the receipt's own totals (archive-v2 §1.2).</summary>
         Sales,
 
-        /// <summary>S, Z, M, Y, E and A: the period and perpetual totals of a closing (archive-v2 §1.3).</summary>
+        /// <summary>S, Z, M, Y and E: the period and perpetual totals of a closing (archive-v2 §1.3).</summary>
         Closing,
+
+        /// <summary>A: the boundaries the archive receipt signed (archive-v2 §1.4), no closing totals.</summary>
+        Archive,
 
         /// <summary>L, D: the common columns only.</summary>
         Other,
@@ -95,7 +99,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
     }
 
     /// <summary>
-    /// The files of a v2 sub-archive (ADR 0006, archive-v2 field contract, market-fr#227, #221).
+    /// The files of a v2 archive file (ADR 0006, ADR 0019, archive-v2 field contract, market-fr#227, #221).
     /// </summary>
     /// <remarks>
     /// Not written yet: the issuer data beyond the SIRET (under review, #141), the closing period columns
@@ -111,7 +115,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             new ArchiveJournal(0x003, "I", "invoice", "Invoice", "Factures", ArchiveJournalKind.Sales, "I"),
             new ArchiveJournal(0x004, "E", "technical", "Technical", "Opérations techniques", ArchiveJournalKind.Closing, "E"),
             new ArchiveJournal(0x007, "B", "bill", "Bill (note)", "Notes", ArchiveJournalKind.Sales, "B"),
-            new ArchiveJournal(0x008, "A", "archive", "Archive", "Archives", ArchiveJournalKind.Closing, "A"),
+            new ArchiveJournal(0x008, "A", "archive", "Archive", "Archives", ArchiveJournalKind.Archive, "A"),
             new ArchiveJournal(0x009, "L", "log", "Log", "Journal des événements techniques (JET)", ArchiveJournalKind.Other, "L"),
             new ArchiveJournal(0x00A, "D", "copy", "Copy", "Duplicatas", ArchiveJournalKind.Other, "D"),
             new ArchiveJournal(0x00B, "X", "training", "Training", "Mode école", ArchiveJournalKind.Sales, "X"),
@@ -122,24 +126,36 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         };
 
         /// <summary>
-        /// One anchor per journal file with rows in <paramref name="subArchive"/> (market-fr#262, contract section 10):
+        /// One anchor per journal file with rows in <paramref name="file"/> (market-fr#262, contract section 10.2):
         /// <c>chain</c> is the journal letter, <c>firstReceiptIdentification</c> its first row, and <c>previousSignature</c>
         /// exactly what that row's <c>PreviousSignature</c> column holds (the Base64Url signature part, empty at a chain's start).
         /// </summary>
-        public static IReadOnlyList<ManifestChainAnchor> ChainAnchorsOf(SubArchive<ArchiveEntry> subArchive)
+        public static IReadOnlyList<ManifestChainAnchor> ChainAnchorsOf(ArchiveFile<ArchiveEntry> file)
             => Journals
-                .Select(journal => (journal, first: subArchive.Records.FirstOrDefault(journal.Holds)))
+                .Select(journal => (journal, first: file.Records.FirstOrDefault(journal.Holds)))
                 .Where(x => x.first is not null)
                 .Select(x => new ManifestChainAnchor { Chain = x.journal.Letter, FirstReceiptIdentification = x.first!.ReceiptIdentification, PreviousSignature = x.first.PreviousSignature ?? "" })
                 .ToList();
 
         /// <summary>
-        /// The schema of <paramref name="subArchive"/>: <c>LNE</c> when its receipts sign a delimited data set (LNE and
-        /// self-certified SCUs), <c>InfoCert</c> when they sign a JWS; null for a sub-archive without receipts. Both write
-        /// the same files and columns (decided 2026-11-06); the schema says how to read <c>Signature</c>.
+        /// The schema of <paramref name="file"/>: <c>LNE</c> when its receipts sign a delimited data set (LNE and
+        /// self-certified SCUs), <c>InfoCert</c> when they sign a JWS. Both write the same files and columns (decided
+        /// 2026-11-06); the schema says how to read <c>Signature</c>.
         /// </summary>
-        public static string? SchemaOf(SubArchive<ArchiveEntry> subArchive)
-            => subArchive.Records.Count == 0 ? null : subArchive.Records[0].Signature.Contains('|') ? "LNE" : "InfoCert";
+        public static string SchemaOf(ArchiveFile<ArchiveEntry> file)
+            => file.FirstRecord.Signature.Contains('|') ? "LNE" : "InfoCert";
+
+        /// <summary>An entry as the manifest names it (<c>firstRecord</c>, <c>lastRecord</c>).</summary>
+        public static ManifestRecord Describe(ArchiveEntry entry)
+            => new ManifestRecord { ReceiptIdentification = entry.ReceiptIdentification, QueueItemId = entry.QueueItemId, ReceiptMoment = entry.ReceiptMoment };
+
+        /// <summary>
+        /// The packager of v2 archive files: every manifest carries <c>schema</c>, <c>chainAnchors</c> and its first and last
+        /// record, whoever signs (contract section 10.2).
+        /// </summary>
+        /// <param name="signerFor">The signer of a file: the SCU whose certificate signed its entries; throws when its key is not available.</param>
+        public static ArchivePackager<ArchiveEntry> CreatePackager(Func<ArchiveFileKey, IArchiveSigner> signerFor, ArchiveV2Context? context = null, CsvOptions? options = null)
+            => new ArchivePackager<ArchiveEntry>(new[] { CreateWriter(options, context) }, signerFor, Describe, ChainAnchorsOf, SchemaOf);
 
         public const string ChargeItemsFileName = "charge-items.csv";
         public const string PayItemsFileName = "pay-items.csv";
@@ -160,9 +176,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         public static ArchiveJournal? JournalOf(int code) => Journals.FirstOrDefault(j => j.Code == code);
 
-        /// <summary>The sub-archive an entry belongs to: its SCU certificate, format version 2 (ADR 0005).</summary>
-        public static SubArchiveKey KeyOf(ArchiveEntry entry)
-            => new SubArchiveKey(string.IsNullOrEmpty(entry.CertificateSerialNumber) ? "unknown" : entry.CertificateSerialNumber!, ArchiveFormatVersion.V2);
+        /// <summary>The archive file an entry belongs to: its SCU certificate, format version 2 (ADR 0019).</summary>
+        public static ArchiveFileKey KeyOf(ArchiveEntry entry)
+            => new ArchiveFileKey(string.IsNullOrEmpty(entry.CertificateSerialNumber) ? "unknown" : entry.CertificateSerialNumber!, ArchiveFormatVersion.V2);
 
         /// <summary>The journal file of one journal, e.g. for a single-journal export.</summary>
         public static ICsvFileDefinition<ArchiveEntry> JournalFile(ArchiveJournal journal)
@@ -173,6 +189,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         {
             ArchiveJournalKind.Sales => CommonColumns.Concat(SalesTotalsColumns).ToList(),
             ArchiveJournalKind.Closing => CommonColumns.Concat(ClosingTotalsColumns).ToList(),
+            ArchiveJournalKind.Archive => CommonColumns.Concat(ArchiveReceiptColumns).ToList(),
             _ => CommonColumns,
         };
 
@@ -203,8 +220,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             return files;
         }
 
-        public static ISubArchiveWriter<ArchiveEntry> CreateWriter(CsvOptions? options = null, ArchiveV2Context? context = null)
-            => new CsvSubArchiveWriter<ArchiveEntry>(ArchiveFormatVersion.V2, Files(context), options);
+        public static IArchiveFileWriter<ArchiveEntry> CreateWriter(CsvOptions? options = null, ArchiveV2Context? context = null)
+            => new CsvArchiveWriter<ArchiveEntry>(ArchiveFormatVersion.V2, Files(context), options);
 
         private static CsvColumn<ArchiveEntry> Col(string name, Func<ArchiveEntry, object?> value, string description) => new CsvColumn<ArchiveEntry>(name, value, description);
 
@@ -265,6 +282,24 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             .Select(t => Col(t.Name, e => StateNumber(e.StateFR, "Totals", t.Name), t.Label + " de la période close (grand total de période)."))
             .Concat(TotalColumns.Select(t => Col("Perpetual" + t.Name, e => StateNumber(e.StateFR, "Totals", "Perpetual", t.Name), t.Label + " perpétuel, depuis le début de la chaîne (grand total perpétuel).")))
             .ToList();
+
+        /// <summary>
+        /// §1.4: the boundaries of the archive an archive receipt (0x3011) closes, as the queue handed them to the SCU
+        /// in <c>ftStateData.FR.Archive</c> and the SCU signed them, and the archive-period total. The archive-period
+        /// totals per VAT case and pay-item class are not archived.
+        /// </summary>
+        public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> ArchiveReceiptColumns = new[]
+        {
+            Col("PreviousArchiveQueueItemID", e => ArchiveId(e, "PreviousArchiveQueueItemId"), "Identifiant (ftQueueItemID) du reçu d'archive précédent ; vide pour le premier reçu d'archive de la caisse. Chaîne les archives."),
+            Col("FirstContainedReceiptQueueItemID", e => ArchiveId(e, "FirstContainedReceiptQueueItemId"), "Identifiant du premier enregistrement contenu dans l'archive, signé : l'enregistrement qui suit le reçu d'archive précédent."),
+            Col("FirstContainedReceiptMoment", e => ArchiveMoment(e, "FirstContainedReceiptMoment"), "Date et heure (UTC) du premier enregistrement contenu dans l'archive, signées."),
+            Col("LastContainedReceiptQueueItemID", e => ArchiveId(e, "LastContainedReceiptQueueItemId"), "Identifiant du dernier enregistrement contenu dans l'archive, signé : le reçu d'archive lui-même."),
+            Col("LastContainedReceiptMoment", e => ArchiveMoment(e, "LastContainedReceiptMoment"), "Date et heure (UTC) du dernier enregistrement contenu dans l'archive, signées."),
+            Col("LastReceiptJournalID", e => ArchiveId(e, "LastReceiptJournalId"), "Dernière ligne du journal des reçus avant le reçu d'archive, signée."),
+            Col("LastActionJournalID", e => ArchiveId(e, "LastActionJournalId"), "Dernière ligne du journal des actions avant le reçu d'archive, signée."),
+            Col("LastJournalFRID", e => ArchiveId(e, "LastJournalFRId"), "Dernière ligne ftJournalFR avant le reçu d'archive, signée ; vide, la version 2 n'en écrit pas."),
+            Col("ATotalizer", e => StateNumber(e.StateFR, "Totals", "Totalizer"), "Total TTC de la période d'archivage close par le reçu."),
+        };
 
         /// <summary>§2, the charge items: the POS's values and the values the queue computed and stored.</summary>
         public static readonly IReadOnlyList<CsvColumn<ChildRow<ArchiveEntry, JsonElement>>> ChargeItemColumns = new[]
@@ -379,6 +414,21 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         private static string? LineNumber(ChildRow<ArchiveEntry, JsonElement> row, string name) => Line(row) is { } line ? RawNumber(line, name) : null;
 
         private static string? LineText(ChildRow<ArchiveEntry, JsonElement> row, string name) => Line(row) is { } line ? ArchiveEntry.Text(line, name) : null;
+
+        private static JsonElement? ArchiveBoundaries(ArchiveEntry entry)
+            => entry.StateFR is { } fr && ArchiveEntry.Property(fr, "Archive") is { ValueKind: JsonValueKind.Object } archive ? archive : (JsonElement?) null;
+
+        /// <summary>A GUID of the boundaries, written as "D"; a value that is no GUID as stored.</summary>
+        private static object? ArchiveId(ArchiveEntry entry, string name)
+            => ArchiveBoundaries(entry) is { } archive && ArchiveEntry.String(archive, name) is { } text
+                ? Guid.TryParse(text, out var id) ? id : (object) text
+                : null;
+
+        /// <summary>A moment of the boundaries, in UTC; a value that is no date as stored.</summary>
+        private static object? ArchiveMoment(ArchiveEntry entry, string name)
+            => ArchiveBoundaries(entry) is { } archive
+                ? ArchiveEntry.Moment(archive, name) is { } moment ? moment : (object?) ArchiveEntry.String(archive, name)
+                : null;
 
         private static string? StateNumber(JsonElement? element, params string[] path)
         {

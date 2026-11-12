@@ -18,8 +18,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
     /// a JSON string decodes to exactly the stored text.
     /// </summary>
     /// <remarks>
-    /// One line per entry, in the sub-archive's order, LF-terminated whatever <see cref="CsvOptions.NewLine"/>
-    /// says. It implements the CSV file interface only to be written into a sub-archive like the others.
+    /// One line per entry, in the archive file's order, LF-terminated whatever <see cref="CsvOptions.NewLine"/>
+    /// says. It implements the CSV file interface only to be written into an archive file like the others.
     /// </remarks>
     public sealed class RequestsFile : ICsvFileDefinition<ArchiveEntry>
     {

@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Journal.FR.Archive.Model;
@@ -13,14 +13,14 @@ using fiskaltrust.Middleware.Journal.FR.Archive.Writing;
 
 namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
 {
-    /// <summary>What every manifest of one generation run carries besides the period (market-fr#133).</summary>
+    /// <summary>What every manifest of one generation run carries besides the file's own data (market-fr#133).</summary>
     public sealed class ArchiveMetadata
     {
         public ArchiveMetadata(string siret, DateTime generatedAt, string? documentationUrl = null)
         {
             if (siret is null || siret.Length != 14 || !siret.All(c => c >= '0' && c <= '9'))
             {
-                throw new ArgumentException("A SIRET is 14 digits.", nameof(siret));
+                throw new ArgumentException($"A SIRET is 14 digits; '{siret}' is not.", nameof(siret));
             }
             Siret = siret;
             GeneratedAt = Utc.Normalize(generatedAt);
@@ -35,16 +35,14 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
     }
 
     /// <summary>
-    /// Writes a main archive as a signed zip: one signed zip per sub-archive, the archive signing
-    /// certificate, and a signed manifest (ADR 0005, ADR 0007, market-fr#133). Everything is streamed
-    /// into the output, so no file is staged on disk (unlike the v1.3 ArchiveProcessor, whose temporary
-    /// directory handling left the CSV files out of the zip).
+    /// Writes one archive file as a standalone signed zip (ADR 0019, contract section 10): its data files, the SCU
+    /// certificate <c>archive-certificate.cer</c>, and <c>manifest.json</c> signed in <c>manifest.sig</c>. Everything is
+    /// streamed into the output, so no file is staged on disk.
     /// </summary>
     /// <remarks>
-    /// Per-SCU signing (market-fr#262): each sub-archive is signed with the key of the SCU whose
-    /// certificate it embeds, and the main archive's manifest, the signed index of its sub-archives, with
-    /// the key of the newest sub-archive's SCU. Every signer is resolved before anything is written, so an
-    /// export that lacks one SCU's key fails without output.
+    /// The file is signed with the key of the SCU whose certificate signed its entries (market-fr#262, ADR 0019), found by
+    /// the certificate serial of the entries. The signer is resolved before anything is written, so a file whose key is
+    /// missing fails without output.
     /// </remarks>
     public sealed class ArchivePackager<TRecord>
     {
@@ -52,41 +50,25 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
         public const string ManifestSignatureFileName = "manifest.sig";
         public const string ArchiveCertificateFileName = "archive-certificate.cer";
 
-        private readonly IReadOnlyDictionary<ArchiveFormatVersion, ISubArchiveWriter<TRecord>> _writers;
-        private readonly Func<SubArchiveKey, IArchiveSigner> _signerFor;
-        private readonly IArchiveSigner _emptyArchiveSigner;
-        private readonly Func<SubArchiveKey, IArchiveSigner, X509Certificate2?> _scuCertificate;
-        private readonly Func<SubArchive<TRecord>, IReadOnlyList<ManifestChainAnchor>>? _chainAnchors;
-        private readonly Func<SubArchive<TRecord>, string?>? _schemaOf;
-
-        /// <param name="writers">One writer per archive format version.</param>
-        /// <param name="signer">The one archive signer of every sub-archive and of the main archive (fiskaltrust certificate, ADR 0007).</param>
-        /// <param name="scuCertificate">Optional: the SCU certificate of a sub-archive, embedded as {serial}.cer so that the entry signatures can be checked.</param>
-        public ArchivePackager(IEnumerable<ISubArchiveWriter<TRecord>> writers, IArchiveSigner signer, Func<SubArchiveKey, X509Certificate2?>? scuCertificate = null)
-            : this(writers, signer ?? throw new ArgumentNullException(nameof(signer)), _ => signer, (key, _) => scuCertificate?.Invoke(key), null, null)
-        {
-        }
+        private readonly IReadOnlyDictionary<ArchiveFormatVersion, IArchiveFileWriter<TRecord>> _writers;
+        private readonly Func<ArchiveFileKey, IArchiveSigner> _signerFor;
+        private readonly Func<TRecord, ManifestRecord> _describe;
+        private readonly Func<ArchiveFile<TRecord>, IReadOnlyList<ManifestChainAnchor>>? _chainAnchors;
+        private readonly Func<ArchiveFile<TRecord>, string?>? _schemaOf;
 
         /// <param name="writers">One writer per archive format version.</param>
         /// <param name="signerFor">
-        /// The signer of a sub-archive: the SCU whose certificate signed its receipts (market-fr#262). It throws when
-        /// that SCU's key is not available here; the export then fails before anything is written.
+        /// The signer of a file: the SCU whose certificate signed its entries (market-fr#262). It throws when that SCU's key
+        /// is not available here; the file then fails before anything is written.
         /// </param>
-        /// <param name="emptyArchiveSigner">Signs a main archive without any sub-archive: the current SCU.</param>
-        /// <param name="chainAnchors">Optional: per chain, the first entry of a sub-archive and the signature it covers.</param>
-        /// <param name="schemaOf">Optional: the column schema of a sub-archive, <c>InfoCert</c> or <c>LNE</c>.</param>
-        public ArchivePackager(IEnumerable<ISubArchiveWriter<TRecord>> writers, Func<SubArchiveKey, IArchiveSigner> signerFor, IArchiveSigner emptyArchiveSigner,
-            Func<SubArchive<TRecord>, IReadOnlyList<ManifestChainAnchor>>? chainAnchors = null, Func<SubArchive<TRecord>, string?>? schemaOf = null)
-            : this(writers, emptyArchiveSigner, signerFor, (_, signer) => signer.Certificate, chainAnchors, schemaOf)
-        {
-        }
-
-        private ArchivePackager(IEnumerable<ISubArchiveWriter<TRecord>> writers, IArchiveSigner emptyArchiveSigner, Func<SubArchiveKey, IArchiveSigner> signerFor,
-            Func<SubArchiveKey, IArchiveSigner, X509Certificate2?> scuCertificate, Func<SubArchive<TRecord>, IReadOnlyList<ManifestChainAnchor>>? chainAnchors,
-            Func<SubArchive<TRecord>, string?>? schemaOf)
+        /// <param name="describe">How the manifest names a record (<c>firstRecord</c>, <c>lastRecord</c>).</param>
+        /// <param name="chainAnchors">Per chain, the file's first entry and the signature it covers.</param>
+        /// <param name="schemaOf">The column schema of a file, <c>InfoCert</c> or <c>LNE</c>.</param>
+        public ArchivePackager(IEnumerable<IArchiveFileWriter<TRecord>> writers, Func<ArchiveFileKey, IArchiveSigner> signerFor, Func<TRecord, ManifestRecord> describe,
+            Func<ArchiveFile<TRecord>, IReadOnlyList<ManifestChainAnchor>>? chainAnchors = null, Func<ArchiveFile<TRecord>, string?>? schemaOf = null)
         {
             if (writers is null) throw new ArgumentNullException(nameof(writers));
-            var map = new Dictionary<ArchiveFormatVersion, ISubArchiveWriter<TRecord>>();
+            var map = new Dictionary<ArchiveFormatVersion, IArchiveFileWriter<TRecord>>();
             foreach (var writer in writers)
             {
                 if (map.ContainsKey(writer.FormatVersion))
@@ -96,123 +78,90 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                 map.Add(writer.FormatVersion, writer);
             }
             _writers = map;
-            _emptyArchiveSigner = emptyArchiveSigner ?? throw new ArgumentNullException(nameof(emptyArchiveSigner));
             _signerFor = signerFor ?? throw new ArgumentNullException(nameof(signerFor));
-            _scuCertificate = scuCertificate;
+            _describe = describe ?? throw new ArgumentNullException(nameof(describe));
             _chainAnchors = chainAnchors;
             _schemaOf = schemaOf;
         }
 
-        /// <summary>
-        /// <c>subarchive_<serial>_v<version>_<run>.zip</c> (market-fr#262): the run number tells apart the sub-archives of an
-        /// SCU switched out and back in within one main archive.
-        /// </summary>
-        public static string SubArchiveFileName(SubArchiveKey key, int run)
+        /// <summary>With one signer for every file, e.g. a test certificate or an injected signer.</summary>
+        public ArchivePackager(IEnumerable<IArchiveFileWriter<TRecord>> writers, IArchiveSigner signer, Func<TRecord, ManifestRecord> describe,
+            Func<ArchiveFile<TRecord>, IReadOnlyList<ManifestChainAnchor>>? chainAnchors = null, Func<ArchiveFile<TRecord>, string?>? schemaOf = null)
+            : this(writers, signer is null ? throw new ArgumentNullException(nameof(signer)) : _ => signer, describe, chainAnchors, schemaOf)
         {
-            var serial = new string(key.CertificateSerialNumber.Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray());
-            var version = new string(key.FormatVersion.Value.Select(c => char.IsLetterOrDigit(c) || c == '.' ? c : '_').ToArray());
-            return $"subarchive_{serial}_v{version}_{run.ToString(System.Globalization.CultureInfo.InvariantCulture)}.zip";
         }
 
-        public async Task WriteAsync(MainArchive<TRecord> archive, ArchiveMetadata metadata, Stream output, CancellationToken cancellationToken = default)
+        /// <summary>
+        /// <c>archive_&lt;serial&gt;_&lt;firstMoment&gt;_&lt;lastMoment&gt;.zip</c> (contract section 10): the moments of the file's
+        /// first and last record as <c>yyyyMMddTHHmmssfffffffZ</c> (UTC, to the tick, so two files never share a name); a
+        /// character of the serial that is not a letter, a digit or <c>-</c> becomes <c>_</c>.
+        /// </summary>
+        public static string FileName(ArchiveFile<TRecord> file)
         {
-            if (archive is null) throw new ArgumentNullException(nameof(archive));
+            if (file is null) throw new ArgumentNullException(nameof(file));
+            var serial = new string(file.Key.CertificateSerialNumber.Select(c => char.IsLetterOrDigit(c) || c == '-' ? c : '_').ToArray());
+            return $"archive_{serial}_{NameMoment(file.FirstRecordMoment)}_{NameMoment(file.LastRecordMoment)}.zip";
+        }
+
+        private static string NameMoment(DateTime moment) => moment.ToString("yyyyMMdd'T'HHmmssfffffff'Z'", CultureInfo.InvariantCulture);
+
+        public async Task WriteAsync(ArchiveFile<TRecord> file, ArchiveMetadata metadata, Stream output, CancellationToken cancellationToken = default)
+        {
+            if (file is null) throw new ArgumentNullException(nameof(file));
             if (metadata is null) throw new ArgumentNullException(nameof(metadata));
             if (output is null) throw new ArgumentNullException(nameof(output));
 
-            // Fail before writing anything when a writer is missing.
-            var missing = archive.SubArchives.Select(s => s.Key.FormatVersion).FirstOrDefault(v => !_writers.ContainsKey(v));
-            if (missing is not null)
+            // Fail before writing anything when the writer or the signer is missing.
+            if (!_writers.TryGetValue(file.Key.FormatVersion, out var writer))
             {
-                throw new InvalidOperationException($"No sub-archive writer for archive format version {missing}.");
+                throw new InvalidOperationException($"No archive file writer for archive format version {file.Key.FormatVersion}.");
             }
-            var duplicateName = archive.SubArchives.GroupBy(s => SubArchiveFileName(s.Key, s.Run), StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
-            if (duplicateName is not null)
+            var signer = _signerFor(file.Key) ?? throw new InvalidOperationException($"No archive signer for the SCU certificate {file.Key.CertificateSerialNumber}.");
+            if (signer.Certificate is null)
             {
-                throw new InvalidOperationException($"Two sub-archives map to the file name {duplicateName.Key}.");
-            }
-
-            // Resolve every signer first: an export missing one SCU's key must fail before writing anything.
-            var signers = archive.SubArchives.ToDictionary(s => s, s => _signerFor(s.Key) ?? throw new InvalidOperationException($"No archive signer for the SCU certificate {s.Key.CertificateSerialNumber}."));
-            var newest = archive.SubArchives
-                .OrderBy(s => s.LastRecordMoment ?? s.Period.End)
-                .ThenBy(s => s.Period.End)
-                .LastOrDefault();
-            var mainSigner = newest is null ? _emptyArchiveSigner : signers[newest];
-
-            var manifest = NewManifest(ArchiveManifest.MainKind, archive.Period, metadata, mainSigner);
-            manifest.FirstRecordMoment = archive.FirstRecordMoment;
-            manifest.LastRecordMoment = archive.LastRecordMoment;
-            manifest.RecordCount = archive.SubArchives.Sum(s => s.Records.Count);
-            manifest.SubArchives = new List<ManifestSubArchive>();
-            manifest.Schema = newest is null ? null : _schemaOf?.Invoke(newest);
-
-            using (var zip = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
-            {
-                var sink = new ZipFileSink(zip, mainSigner, manifest, metadata.GeneratedAt);
-                foreach (var subArchive in archive.SubArchives)
-                {
-                    var fileName = SubArchiveFileName(subArchive.Key, subArchive.Run);
-                    await sink.WriteFileAsync(fileName, (stream, ct) => WriteSubArchiveAsync(subArchive, signers[subArchive], metadata, stream, ct), cancellationToken).ConfigureAwait(false);
-                    manifest.SubArchives.Add(new ManifestSubArchive
-                    {
-                        FileName = fileName,
-                        CertificateSerialNumber = subArchive.Key.CertificateSerialNumber,
-                        Run = subArchive.Run,
-                        FormatVersion = subArchive.Key.FormatVersion.Value,
-                        Schema = _schemaOf?.Invoke(subArchive),
-                        RecordCount = subArchive.Records.Count,
-                        PeriodStart = subArchive.Period.Start,
-                        PeriodEnd = subArchive.Period.End,
-                        FirstRecordMoment = subArchive.FirstRecordMoment,
-                        LastRecordMoment = subArchive.LastRecordMoment,
-                        Hash = manifest.Files.Last(f => f.Name == fileName).Hash
-                    });
-                }
-                await FinishAsync(sink, manifest, mainSigner, cancellationToken).ConfigureAwait(false);
-            }
-        }
-
-        private async Task WriteSubArchiveAsync(SubArchive<TRecord> subArchive, IArchiveSigner signer, ArchiveMetadata metadata, Stream output, CancellationToken cancellationToken)
-        {
-            var manifest = NewManifest(ArchiveManifest.SubKind, subArchive.Period, metadata, signer);
-            manifest.CertificateSerialNumber = subArchive.Key.CertificateSerialNumber;
-            manifest.Run = subArchive.Run;
-            manifest.FormatVersion = subArchive.Key.FormatVersion.Value;
-            manifest.FirstRecordMoment = subArchive.FirstRecordMoment;
-            manifest.LastRecordMoment = subArchive.LastRecordMoment;
-            manifest.RecordCount = subArchive.Records.Count;
-            manifest.Schema = _schemaOf?.Invoke(subArchive);
-            if (_chainAnchors is not null)
-            {
-                manifest.ChainAnchors = _chainAnchors(subArchive).ToList();
+                throw new InvalidOperationException($"The archive signer for the SCU certificate {file.Key.CertificateSerialNumber} has no certificate.");
             }
 
+            var manifest = NewManifest(file, metadata, signer);
             using var zip = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true);
             var sink = new ZipFileSink(zip, signer, manifest, metadata.GeneratedAt);
-            await _writers[subArchive.Key.FormatVersion].WriteAsync(subArchive, sink, cancellationToken).ConfigureAwait(false);
+            await writer.WriteAsync(file, sink, cancellationToken).ConfigureAwait(false);
+            await sink.WriteBytesAsync(ArchiveCertificateFileName, signer.Certificate.RawData, cancellationToken).ConfigureAwait(false);
 
-            var scuCertificate = _scuCertificate(subArchive.Key, signer);
-            if (scuCertificate is not null)
+            var manifestBytes = ManifestSerializer.Serialize(manifest);
+            byte[] manifestHash;
+            using (var sha256 = SHA256.Create())
             {
-                var name = Path.GetFileNameWithoutExtension(SubArchiveFileName(subArchive.Key, subArchive.Run)).Replace("subarchive_", "scu_") + ".cer";
-                await sink.WriteBytesAsync(name, scuCertificate.RawData, cancellationToken).ConfigureAwait(false);
+                manifestHash = sha256.ComputeHash(manifestBytes);
             }
-            await FinishAsync(sink, manifest, signer, cancellationToken).ConfigureAwait(false);
+            var signature = await sink.SignAsync(manifestHash, cancellationToken).ConfigureAwait(false);
+            await sink.WriteUnlistedAsync(ManifestFileName, manifestBytes, cancellationToken).ConfigureAwait(false);
+            await sink.WriteUnlistedAsync(ManifestSignatureFileName, System.Text.Encoding.ASCII.GetBytes(Convert.ToBase64String(signature)), cancellationToken).ConfigureAwait(false);
         }
 
-        private static ArchiveManifest NewManifest(string kind, ArchivePeriod period, ArchiveMetadata metadata, IArchiveSigner signer)
+        private ArchiveManifest NewManifest(ArchiveFile<TRecord> file, ArchiveMetadata metadata, IArchiveSigner signer)
         {
             var certificate = signer.Certificate;
             using var sha256 = SHA256.Create();
             return new ArchiveManifest
             {
-                Kind = kind,
+                Schema = _schemaOf?.Invoke(file),
+                CertificateSerialNumber = file.Key.CertificateSerialNumber,
+                FormatVersion = file.Key.FormatVersion.Value,
                 Siret = metadata.Siret,
                 DocumentationUrl = metadata.DocumentationUrl,
-                PeriodStart = period.Start,
-                PeriodEnd = period.End,
                 GeneratedAt = metadata.GeneratedAt,
+                PeriodStart = file.Period?.Start,
+                PeriodEnd = file.Period?.End,
+                RequestStart = file.RequestedPeriod?.Start,
+                RequestEnd = file.RequestedPeriod?.End,
+                Part = file.Part,
+                PartCount = file.PartCount,
+                FirstRecord = _describe(file.FirstRecord),
+                LastRecord = _describe(file.LastRecord),
+                RecordCount = file.Records.Count,
+                ClosedBy = file.ClosedBy.ToManifestValue(),
+                ForcedArchive = file.ForcedArchive,
                 SignatureAlgorithm = signer.SignatureAlgorithm,
                 SigningCertificate = new ManifestCertificate
                 {
@@ -221,22 +170,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                     Subject = certificate.Subject,
                     Issuer = certificate.Issuer,
                     Sha256Thumbprint = Convert.ToBase64String(sha256.ComputeHash(certificate.RawData))
-                }
+                },
+                ChainAnchors = _chainAnchors?.Invoke(file).ToList(),
             };
-        }
-
-        private static async Task FinishAsync(ZipFileSink sink, ArchiveManifest manifest, IArchiveSigner signer, CancellationToken cancellationToken)
-        {
-            await sink.WriteBytesAsync(ArchiveCertificateFileName, signer.Certificate.RawData, cancellationToken).ConfigureAwait(false);
-            var manifestBytes = ManifestSerializer.Serialize(manifest);
-            byte[] manifestHash;
-            using (var sha256 = SHA256.Create())
-            {
-                manifestHash = sha256.ComputeHash(manifestBytes);
-            }
-            var signature = await signer.SignHashAsync(manifestHash, cancellationToken).ConfigureAwait(false);
-            await sink.WriteUnlistedAsync(ManifestFileName, manifestBytes, cancellationToken).ConfigureAwait(false);
-            await sink.WriteUnlistedAsync(ManifestSignatureFileName, System.Text.Encoding.ASCII.GetBytes(Convert.ToBase64String(signature)), cancellationToken).ConfigureAwait(false);
         }
 
         private sealed class ZipFileSink : IArchiveFileSink
@@ -276,7 +212,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                     hash = hashing.GetHash();
                     size = hashing.BytesWritten;
                 }
-                var signature = await _signer.SignHashAsync(hash, cancellationToken).ConfigureAwait(false);
+                var signature = await SignAsync(hash, cancellationToken).ConfigureAwait(false);
                 _manifest.Files.Add(new ManifestFile
                 {
                     Name = fileName,
@@ -284,6 +220,26 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                     Hash = Convert.ToBase64String(hash),
                     Signature = Convert.ToBase64String(signature)
                 });
+            }
+
+            /// <summary>Signs a hash, and checks the signature against the certificate: an archive never carries a signature that does not verify.</summary>
+            public async Task<byte[]> SignAsync(byte[] hash, CancellationToken cancellationToken)
+            {
+                var signature = await _signer.SignHashAsync(hash, cancellationToken).ConfigureAwait(false);
+                bool verifies;
+                try
+                {
+                    verifies = signature is not null && signature.Length > 0 && ArchiveSignatureVerifier.Verify(_signer.Certificate, _signer.SignatureAlgorithm, hash, signature);
+                }
+                catch (CryptographicException)
+                {
+                    verifies = false;
+                }
+                if (!verifies)
+                {
+                    throw new InvalidOperationException($"The archive signer returned a signature that does not verify against its certificate {_signer.Certificate.SerialNumber} ({_signer.SignatureAlgorithm}).");
+                }
+                return signature;
             }
 
             public Task WriteBytesAsync(string fileName, byte[] content, CancellationToken cancellationToken)

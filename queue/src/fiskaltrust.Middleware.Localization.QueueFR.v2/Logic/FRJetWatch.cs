@@ -133,7 +133,16 @@ public class FRJetWatch
             }
 
             // A v1.2 entry (half migration) is not a v2 archive entry, but its version still counts.
-            var entry = ArchiveEntry.TryCreate(item.ftQueueItemId, item.ftQueueId, item.ftQueueRow, item.request, item.response);
+            ArchiveEntry? entry;
+            try
+            {
+                entry = ArchiveEntry.Read(item.ftQueueItemId, item.ftQueueId, item.ftQueueRow, item.request, item.response);
+            }
+            catch (ArchiveEntryException)
+            {
+                // An unreadable entry tells nothing about the installation; the export reports it.
+                continue;
+            }
             if (entry is not null)
             {
                 return new Installation(item.ProcessingVersion, entry.CertificateSerialNumber, ScuKindOf(entry.Signature, HasCertificationBody(item.response)));

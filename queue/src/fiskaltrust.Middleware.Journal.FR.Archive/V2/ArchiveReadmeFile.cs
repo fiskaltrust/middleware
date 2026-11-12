@@ -11,7 +11,7 @@ using fiskaltrust.Middleware.Journal.FR.Archive.Csv;
 namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 {
     /// <summary>
-    /// <c>README.txt</c> of a v2 sub-archive (archive-v2 §11): explains, in French, how to read this archive and
+    /// <c>README.txt</c> of a v2 archive file (archive-v2 §11): explains, in French, how to read this archive and
     /// describes every file and column it holds. It carries no auditable data: the issuer, the period and the counts
     /// are in the manifest and the files, which it points to. Built from the same column definitions as the files,
     /// so it cannot describe a column the archive lacks or miss one it has.
@@ -51,9 +51,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                     + "auquel il renvoie. Il est généré avec l'archive, pour cette archive.");
                 Para("L'archive est produite par fiskaltrust.Middleware, module de fiscalisation pour la France "
                     + "(QueueFR, format d'archive version 2). Les clés de manifest.json donnent l'émetteur (siret), "
-                    + "la période archivée (periodStart, periodEnd), le premier et le dernier enregistrement "
-                    + "(firstRecordMoment, lastRecordMoment), leur nombre (recordCount), le schéma de signature "
-                    + "(schema : InfoCert ou LNE) et la date de génération (generatedAt).");
+                    + "le certificat qui a signé les documents et l'archive (certificateSerialNumber), la tranche "
+                    + "couverte par ce fichier (periodStart, periodEnd, jamais plus d'un an), la période demandée "
+                    + "(requestStart, requestEnd) et la place du fichier parmi ceux qu'elle a produits (part, "
+                    + "partCount), le premier et le dernier enregistrement (firstRecord, lastRecord), leur nombre "
+                    + "(recordCount), la raison de la fin du fichier (closedBy), le schéma de signature (schema : "
+                    + "InfoCert ou LNE) et la date de génération (generatedAt).");
             }));
 
             sections.Add(("2.", "Lecture des fichiers", () =>
@@ -78,11 +81,17 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
             sections.Add(("3.", "Organisation de l'archive", () =>
             {
-                Para("Une archive principale contient une ou plusieurs sous-archives (fichiers "
-                    + "subarchive_<numéro de série>_v<version>_<rang>.zip). Chaque sous-archive couvre la part de la "
-                    + "période signée par un même certificat de signature, dans une même version de format ; "
-                    + "ensemble, elles couvrent toute la période sans chevauchement. Chaque sous-archive contient "
-                    + "les fichiers décrits en section 4 et son propre README.txt.");
+                Para("Chaque archive est un fichier autonome, archive_<numéro de série>_<premier "
+                    + "enregistrement>_<dernier enregistrement>.zip, qui contient les documents signés par un seul "
+                    + "certificat, dans une seule version de format, sur au plus un an, et les fichiers décrits en "
+                    + "section 4. Il n'y a ni archive principale ni sous-archive. Les enregistrements sont ceux de la "
+                    + "période demandée, dans l'ordre de la file : du premier dont la date est dans la période au "
+                    + "dernier, y compris ceux dont l'horloge a sauté entre les deux.");
+                Para("Une demande est découpée en plusieurs fichiers au changement de certificat (closedBy = "
+                    + "lastSignedEntry), à la migration de format (formatChange) et à la limite d'un an comptée depuis "
+                    + "le premier enregistrement du fichier (yearLimit) ; le dernier fichier se termine avec la "
+                    + "période (periodEnd). Un reçu d'archive n'est pas un point de coupure : la plage qu'il signe "
+                    + "peut commencer avant ce fichier.");
                 Para("Chaque document est signé et chaîné à la signature du document précédent de la même chaîne. "
                     + "Une chaîne par type de document, identifiée par une lettre ; chaque chaîne a son journal :");
                 foreach (var journal in ArchiveV2Files.Journals)
@@ -144,8 +153,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 lines.AddRange(new[] { "", $"== 4.{index} manifest.json, manifest.sig et certificats ==", "" });
                 Para("manifest.json décrit l'archive (section 1) et liste chaque fichier avec sa taille, son "
                     + "empreinte SHA-256 et sa signature. manifest.sig est la signature de manifest.json. "
-                    + "archive-certificate.cer est le certificat de signature de l'archive ; scu_*.cer est le "
-                    + "certificat qui a signé les documents.");
+                    + "archive-certificate.cer est le certificat du module de signature (SCU) qui a signé les "
+                    + "documents de ce fichier et l'archive elle-même.");
             }));
 
             sections.Add(("5.", "Listes de valeurs codées", () =>
@@ -201,12 +210,13 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                     + "archive-certificate.cer, sur l'empreinte SHA-256, selon l'algorithme de la clé "
                     + "signatureAlgorithm de manifest.json (ES256 : ECDSA P-256, signature r||s), puis, pour chaque "
                     + "fichier listé dans manifest.json, sa taille, son empreinte SHA-256 et sa signature.");
-                Item("Documents : vérifier la signature de chaque document (colonne Signature) avec le certificat "
-                    + "scu_*.cer dont le numéro de série figure dans CertificateSerialNumber.");
+                Item("Documents : vérifier la signature de chaque document (colonne Signature) avec le même "
+                    + "certificat archive-certificate.cer, dont le numéro de série figure dans CertificateSerialNumber.");
                 Item("Chaînage : dans chaque journal, PreviousSignature d'un document est égale à la partie "
                     + "signature (après le dernier point) de Signature du document précédent de la même chaîne, "
                     + "et ChainCounter augmente de 1 sans trou. manifest.json (chainAnchors) donne le point de "
-                    + "départ de chaque chaîne dans la sous-archive.");
+                    + "départ de chaque chaîne dans ce fichier ; il prolonge le dernier document de la chaîne dans "
+                    + "le fichier précédent.");
                 Item("Requêtes : l'empreinte RequestHash se recalcule à partir de requests.jsonl, selon la forme "
                     + "canonique documentée par fiskaltrust.");
                 Item("Outil : l'outil fiskaltrust TaxAuditorTool réalise tous ces contrôles.");

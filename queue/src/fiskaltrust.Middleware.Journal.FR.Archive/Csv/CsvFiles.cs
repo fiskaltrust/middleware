@@ -30,7 +30,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Csv
     }
 
     /// <summary>
-    /// One CSV file of a sub-archive, built from the sub-archive's records. This is the extension point for
+    /// One CSV file of an archive file, built from the file's records. This is the extension point for
     /// the column sets: the files and fields of each archive format version are defined by the field
     /// specification (market-fr#215, #214, #216), not by this package.
     /// </summary>
@@ -47,7 +47,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Csv
 
     public interface ICsvFileDefinition<TRecord>
     {
-        /// <summary>File name inside the sub-archive, e.g. "receipts.csv".</summary>
+        /// <summary>File name inside the archive file, e.g. "receipts.csv".</summary>
         string FileName { get; }
 
         Task WriteAsync(IReadOnlyList<TRecord> records, TextWriter writer, CsvOptions options, CancellationToken cancellationToken);

@@ -130,8 +130,32 @@ public class FRJournalExportTests : IDisposable
 
         var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
         using var zip = new ZipArchive(new MemoryStream(bytes));
-        using var subArchive = new ZipArchive(zip.Entries.Single(e => e.Name.StartsWith("subarchive_")).Open());
-        subArchive.Entries.Should().Contain(e => e.Name == "journal-A-archive.csv");
+        zip.Entries.Should().Contain(e => e.Name == "journal-A-archive.csv");
+    }
+
+    /// <summary>The archive receipt's row carries the boundaries it signed (contract §1.4), never closing totals.</summary>
+    [Fact]
+    public async Task ArchiveJournal_CarriesTheSignedBoundaries()
+    {
+        var firstSale = await SignAsync(CashSale());
+        var first = await SignAsync(Request((ReceiptCase) 0x3011));
+        var secondSale = await SignAsync(CashSale());
+        var second = await SignAsync(Request((ReceiptCase) 0x3011));
+
+        var rows = Rows(await ReadAsync(_journal, JournalTypeFR.Archive));
+
+        rows.Should().HaveCount(2);
+        rows[0]["PreviousArchiveQueueItemID"].Should().BeEmpty("the queue's first archive receipt has no previous one");
+        rows[0]["FirstContainedReceiptQueueItemID"].Should().Be(firstSale.ftQueueItemID.ToString("D"));
+        rows[0]["FirstContainedReceiptMoment"].Should().Be(firstSale.ftReceiptMoment.ToUniversalTime().ToString("o"));
+        rows[1]["PreviousArchiveQueueItemID"].Should().Be(first.ftQueueItemID.ToString("D"));
+        rows[1]["FirstContainedReceiptQueueItemID"].Should().Be(secondSale.ftQueueItemID.ToString("D"));
+        rows[1]["LastContainedReceiptQueueItemID"].Should().Be(second.ftQueueItemID.ToString("D"), "the archive receipt is its own last contained receipt");
+        rows[1]["LastContainedReceiptMoment"].Should().Be(second.ftReceiptMoment.ToUniversalTime().ToString("o"));
+        rows[1]["LastReceiptJournalID"].Should().NotBeEmpty();
+        rows[1]["LastJournalFRID"].Should().BeEmpty();
+        rows[1]["ATotalizer"].Should().Be("12.00", "the archive period of the second receipt holds one 12.00 sale");
+        rows[1].Keys.Should().NotContain(new[] { "Totalizer", "CINormal", "PerpetualTotalizer" });
     }
 
     /// <summary>
@@ -151,8 +175,7 @@ public class FRJournalExportTests : IDisposable
         var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
 
         using var zip = new ZipArchive(new MemoryStream(bytes));
-        using var subArchive = new ZipArchive(zip.Entries.Single(e => e.Name.StartsWith("subarchive_")).Open());
-        using var manifest = JsonDocument.Parse(ReadEntry(subArchive, ArchivePackager<object>.ManifestFileName));
+        using var manifest = JsonDocument.Parse(ReadEntry(zip, ArchivePackager<object>.ManifestFileName));
         var anchor = manifest.RootElement.GetProperty("chainAnchors").EnumerateArray().Single(a => a.GetProperty("chain").GetString() == "A");
         anchor.GetProperty("firstReceiptIdentification").GetString().Should().Be(second.ftReceiptIdentification);
         anchor.GetProperty("previousSignature").GetString().Should().Be(ChainedSignature(first));
@@ -227,8 +250,7 @@ public class FRJournalExportTests : IDisposable
 
         ArchiveVerifier.Verify(new MemoryStream(bytes)).Errors.Should().BeEmpty();
         using var zip = new ZipArchive(new MemoryStream(bytes));
-        var subArchive = zip.Entries.Should().ContainSingle(e => e.Name.StartsWith("subarchive_")).Subject;
-        using var sub = new ZipArchive(subArchive.Open());
+        var sub = zip;
         var tickets = ReadCsv(sub, "journal-T-ticket.csv");
         tickets.Should().ContainSingle(r => r["ftReceiptIdentification"] == sale.ftReceiptIdentification);
         var ticket = tickets.Single(r => r["ftReceiptIdentification"] == sale.ftReceiptIdentification);
@@ -243,7 +265,7 @@ public class FRJournalExportTests : IDisposable
         using var archiveCertificate = new X509Certificate2(ReadEntry(zip, ArchivePackager<object>.ArchiveCertificateFileName));
         using var scuKey = new X509Certificate2(Convert.FromBase64String((await _scu.GetSigningCertificateAsync()).CertificateBase64)).GetECDsaPublicKey()!;
         archiveCertificate.GetECDsaPublicKey()!.ExportSubjectPublicKeyInfo().Should().Equal(scuKey.ExportSubjectPublicKeyInfo(), "the queue's SCU signs a locally exported archive (ADR 0007 amendment)");
-        sub.Entries.Should().Contain(e => e.Name == "scu_INMEMORY_0001_v2_1.cer", "the SCU certificate also checks the entries it signed");
+        zip.Entries.Should().NotContain(e => e.Name.StartsWith("scu_") || e.Name.StartsWith("subarchive_"), "archive-certificate.cer is the file's own SCU certificate (ADR 0019)");
     }
 
     [Fact]
@@ -257,19 +279,84 @@ public class FRJournalExportTests : IDisposable
         var repository = await _storageProvider.CreateMiddlewareQueueItemRepository();
         var stored = (await repository.GetAsync()).Single(q => q.ftQueueItemId == sale.ftQueueItemID);
         using var zip = new ZipArchive(new MemoryStream(bytes));
-        using var sub = new ZipArchive(zip.Entries.Single(e => e.Name.StartsWith("subarchive_")).Open());
-        var lines = Encoding.UTF8.GetString(ReadEntry(sub, "requests.jsonl")).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var lines = Encoding.UTF8.GetString(ReadEntry(zip, "requests.jsonl")).Split('\n', StringSplitOptions.RemoveEmptyEntries);
         using var line = JsonDocument.Parse(lines.Single());
         line.RootElement.GetProperty("ftQueueItemID").GetString().Should().Be(sale.ftQueueItemID.ToString("D"));
         line.RootElement.GetProperty("request").GetString().Should().Be(stored.request, "a verifier recomputes the request hash from the stored bytes (archive-v2 section 9)");
     }
 
+    /// <summary>One standalone file under one certificate with one manifest kind (ADR 0019, contract section 10.2).</summary>
     [Fact]
-    public async Task ArchiveExport_OverTwoFiscalYears_IsRefused()
+    public async Task ArchiveExport_IsOneStandaloneFile_WithTheFileManifest()
     {
+        var from = DateTime.UtcNow.AddMinutes(-1);
+        var first = await SignAsync(CashSale());
+        var last = await SignAsync(CashSale());
+        var to = DateTime.UtcNow.AddMinutes(1);
+
+        var (contentType, reader) = await _journal(JsonSerializer.Serialize(new JournalRequest { ftJournalType = JournalTypeFR.ArchiveExport.As<JournalType>(), From = from.Ticks, To = to.Ticks }));
+        using var buffer = new MemoryStream();
+        await reader.CopyToAsync(buffer);
+
+        contentType.Name.Should().MatchRegex("^archive_INMEMORY-0001_[0-9]{8}T[0-9]{6}[0-9]{7}Z_[0-9]{8}T[0-9]{6}[0-9]{7}Z\\.zip$");
+        using var zip = new ZipArchive(new MemoryStream(buffer.ToArray()));
+        zip.Entries.Should().NotContain(e => e.Name.EndsWith(".zip"), "there is no main archive and no sub-archive");
+        using var manifest = JsonDocument.Parse(ReadEntry(zip, ArchivePackager<object>.ManifestFileName));
+        var root = manifest.RootElement;
+        root.TryGetProperty("kind", out _).Should().BeFalse();
+        root.TryGetProperty("subArchives", out _).Should().BeFalse();
+        root.TryGetProperty("run", out _).Should().BeFalse();
+        root.GetProperty("certificateSerialNumber").GetString().Should().Be("INMEMORY-0001");
+        root.GetProperty("formatVersion").GetString().Should().Be("2");
+        root.GetProperty("schema").GetString().Should().Be("LNE");
+        root.GetProperty("part").GetInt32().Should().Be(1);
+        root.GetProperty("partCount").GetInt32().Should().Be(1);
+        root.GetProperty("closedBy").GetString().Should().Be("periodEnd");
+        root.GetProperty("requestStart").GetDateTime().Should().Be(from.ToUniversalTime());
+        root.GetProperty("requestEnd").GetDateTime().Should().Be(to.ToUniversalTime().AddTicks(1));
+        root.GetProperty("periodStart").GetDateTime().Should().Be(from.ToUniversalTime(), "a request of a year or less states exactly from and to");
+        root.GetProperty("periodEnd").GetDateTime().Should().Be(to.ToUniversalTime().AddTicks(1));
+        root.GetProperty("recordCount").GetInt32().Should().Be(2);
+        root.GetProperty("firstRecord").GetProperty("ftQueueItemID").GetString().Should().Be(first.ftQueueItemID.ToString("D"));
+        root.GetProperty("firstRecord").GetProperty("ftReceiptIdentification").GetString().Should().Be(first.ftReceiptIdentification);
+        root.GetProperty("firstRecord").GetProperty("ftReceiptMoment").GetDateTime().Should().Be(first.ftReceiptMoment.ToUniversalTime());
+        root.GetProperty("lastRecord").GetProperty("ftQueueItemID").GetString().Should().Be(last.ftQueueItemID.ToString("D"));
+        root.GetProperty("chainAnchors").EnumerateArray().Should().ContainSingle(a => a.GetProperty("chain").GetString() == "T");
+    }
+
+    [Fact]
+    public async Task ArchiveExport_OfAPeriodWithoutReceipts_IsRefused()
+    {
+        await SignAsync(CashSale());
+
         var act = () => ReadAsync(_journal, JournalTypeFR.ArchiveExport, new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc).Ticks, new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc).Ticks);
 
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*fiscal year*");
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*no receipt*");
+    }
+
+    /// <summary>A request longer than a year whose records lie within one year is one file, sliced on its records (contract section 10.3).</summary>
+    [Fact]
+    public async Task ArchiveExport_OfARequestOverAYear_WithRecordsInOneYear_IsOneFile()
+    {
+        var from = DateTime.UtcNow.AddYears(-3);
+        var sale = await SignAsync(CashSale());
+
+        var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
+
+        using var zip = new ZipArchive(new MemoryStream(bytes));
+        using var manifest = JsonDocument.Parse(ReadEntry(zip, ArchivePackager<object>.ManifestFileName));
+        manifest.RootElement.GetProperty("requestStart").GetDateTime().Should().Be(from.ToUniversalTime());
+        manifest.RootElement.GetProperty("periodStart").GetDateTime().Should().Be(sale.ftReceiptMoment.ToUniversalTime(), "from the request start the slice would exceed a year");
+    }
+
+    [Fact]
+    public async Task Journal_WithToAtTheLargestMoment_IsTheOpenEnd()
+    {
+        var sale = await SignAsync(CashSale());
+
+        var rows = Rows(await ReadAsync(_journal, JournalTypeFR.Ticket, 0, DateTime.MaxValue.Ticks));
+
+        rows.Should().ContainSingle().Which["ftReceiptIdentification"].Should().Be(sale.ftReceiptIdentification);
     }
 
     private async Task<ReceiptResponse> SignAsync(ReceiptRequest request)

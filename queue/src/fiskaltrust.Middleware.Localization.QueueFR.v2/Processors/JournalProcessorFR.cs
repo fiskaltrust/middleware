@@ -62,7 +62,6 @@ public class JournalProcessorFR : IJournalProcessor
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository;
     private readonly AsyncLazy<IConfigurationRepository> _configurationRepository;
     private readonly Func<Task<IArchiveSigner>>? _archiveSigner;
-    private readonly ArchiveSplitOptions _splitOptions;
     private readonly Func<Task<FRSSCDInfo?>>? _scuInfo;
     private readonly string? _validationLevel;
 
@@ -72,7 +71,7 @@ public class JournalProcessorFR : IJournalProcessor
     /// </param>
     /// <param name="scuInfo">The SCU's non-secret configuration, joined to the archive as compliance parameters (archive-v2 §12).</param>
     /// <param name="validationLevel">The queue's <c>ValidationLevel</c> as configured, or null when it is not configured (FR then applies <c>Error</c>).</param>
-    public JournalProcessorFR(Guid queueId, IStorageProvider storageProvider, Func<Task<IArchiveSigner>>? archiveSigner = null, ArchiveSplitOptions? splitOptions = null, Func<Task<FRSSCDInfo?>>? scuInfo = null, string? validationLevel = null)
+    public JournalProcessorFR(Guid queueId, IStorageProvider storageProvider, Func<Task<IArchiveSigner>>? archiveSigner = null, Func<Task<FRSSCDInfo?>>? scuInfo = null, string? validationLevel = null)
     {
         _scuInfo = scuInfo;
         _queueId = queueId;
@@ -80,7 +79,6 @@ public class JournalProcessorFR : IJournalProcessor
         _configurationRepository = storageProvider.CreateConfigurationRepository();
         _validationLevel = validationLevel;
         _archiveSigner = archiveSigner;
-        _splitOptions = splitOptions ?? new ArchiveSplitOptions();
     }
 
     public (ContentType, IAsyncEnumerable<byte[]>) ProcessAsync(JournalRequest request)
@@ -114,14 +112,8 @@ public class JournalProcessorFR : IJournalProcessor
             }
 
             var period = new ArchivePeriod(from, to);
-            var slices = ArchiveSplitter.Slices(period, _splitOptions);
-            if (slices.Count > 1)
-            {
-                throw new ArgumentException(
-                    $"The requested period {period} spans {slices.Count} fiscal years. An archive covers at most one fiscal year (fiskaltrust/market-fr#146): request each year on its own, starting at {slices[1].Start:o}.");
-            }
-
-            return (new ContentType("application/zip"), ArchiveAsync(period, _archiveSigner));
+            var contentType = new ContentType("application/zip");
+            return (contentType, ArchiveAsync(period, _archiveSigner, contentType));
         }
 
         var journal = ArchiveV2Files.JournalOf((int) ((long) journalTypeFR & 0xFFF))
@@ -138,7 +130,10 @@ public class JournalProcessorFR : IJournalProcessor
         }
 
         var from = new DateTime(request.From, DateTimeKind.Utc);
-        var to = request.To == 0 ? DateTime.UtcNow : new DateTime(request.To, DateTimeKind.Utc).AddTicks(1);
+        // To is inclusive; DateTime.MaxValue stands for the open end.
+        var to = request.To == 0 ? DateTime.UtcNow
+            : request.To >= DateTime.MaxValue.Ticks ? DateTime.MaxValue
+            : new DateTime(request.To, DateTimeKind.Utc).AddTicks(1);
         if (to <= from)
         {
             throw new ArgumentException($"The journal period ends ({to:o}) before it starts ({from:o}).");
@@ -169,7 +164,8 @@ public class JournalProcessorFR : IJournalProcessor
 
     private async IAsyncEnumerable<byte[]> JournalAsync(ArchiveJournal journal, ArchivePeriod period, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var entries = await ReadEntriesAsync(period, rejectV1: false).ConfigureAwait(false);
+        using var read = await ReadEntriesAsync(period, rejectV1: false).ConfigureAwait(false);
+        var entries = ArchiveSplitter.Select(read.Entries, e => e.ReceiptMoment, period);
         var file = ArchiveV2Files.JournalFile(journal);
 
         await foreach (var chunk in ThroughTempFileAsync(async stream =>
@@ -184,34 +180,47 @@ public class JournalProcessorFR : IJournalProcessor
         }
     }
 
-    private async IAsyncEnumerable<byte[]> ArchiveAsync(ArchivePeriod period, Func<Task<IArchiveSigner>> createSigner)
+    private async IAsyncEnumerable<byte[]> ArchiveAsync(ArchivePeriod period, Func<Task<IArchiveSigner>> createSigner, ContentType contentType)
     {
+        // Everything that can refuse the export cheaply is checked before the period is read.
         var signer = await createSigner().ConfigureAwait(false);
-        var entries = await ReadEntriesAsync(period, rejectV1: true).ConfigureAwait(false);
-        var archive = ArchiveSplitter.Split(entries, e => e.ReceiptMoment, ArchiveV2Files.KeyOf, period, _splitOptions).Single();
-
         var queueFR = await (await _configurationRepository).GetQueueFRAsync(_queueId).ConfigureAwait(false);
-        var siret = (string.IsNullOrEmpty(queueFR?.Siret) ? null : queueFR!.Siret)
-            ?? entries.Select(e => e.Siret).FirstOrDefault(s => !string.IsNullOrEmpty(s))
-            ?? throw new InvalidOperationException("The archive manifest needs the SIRET, and neither the queue configuration nor the archived entries carry one.");
-        var context = new ArchiveV2Context { ComplianceParameters = await ComplianceParametersAsync(queueFR).ConfigureAwait(false) };
-        // Each sub-archive is signed by the SCU that signed its receipts (market-fr#262). The device holds only its
-        // current SCU's key: an earlier SCU's period is archived when that SCU is switched out (#177) or exported
-        // from the portal, so a local export that reaches into it fails before anything is written.
-        var packager = signer is ScuArchiveSigner scuSigner
-            ? new ArchivePackager<ArchiveEntry>(
-                new[] { ArchiveV2Files.CreateWriter(context: context) },
-                key => key.CertificateSerialNumber == scuSigner.CertificateSerialNumber
-                    ? scuSigner
-                    : throw new NotSupportedException(
-                        $"The period {period} holds entries signed by the SCU certificate {key.CertificateSerialNumber}, and this queue only holds the key of its current SCU ({scuSigner.CertificateSerialNumber}). " +
-                        "Export that period from the portal, or use the archive made when that SCU was switched out (fiskaltrust/market-fr#262, #177)."),
-                scuSigner,
-                ArchiveV2Files.ChainAnchorsOf,
-                ArchiveV2Files.SchemaOf)
-            : new ArchivePackager<ArchiveEntry>(new[] { ArchiveV2Files.CreateWriter(context: context) }, signer);
+        var metadata = string.IsNullOrEmpty(queueFR?.Siret) ? null : new ArchiveMetadata(queueFR!.Siret, DateTime.UtcNow);
 
-        await foreach (var chunk in ThroughTempFileAsync(stream => packager.WriteAsync(archive, new ArchiveMetadata(siret, DateTime.UtcNow), stream)).ConfigureAwait(false))
+        using var read = await ReadEntriesAsync(period, rejectV1: true).ConfigureAwait(false);
+        var files = ArchiveSplitter.Split(read.Entries, e => e.ReceiptMoment, ArchiveV2Files.KeyOf, period);
+        if (files.Count == 0)
+        {
+            throw new ArgumentException($"The requested period {period} holds no receipt, so it gives no archive file (ADR 0019).");
+        }
+
+        // Each file is signed by the SCU that signed its entries (market-fr#262, ADR 0019). The device holds only its
+        // current SCU's key: an earlier SCU's period is exported from the portal, which holds every SCU's key, so a
+        // local export that reaches into it fails before anything is written. An injected signer signs every file.
+        if (signer is ScuArchiveSigner scuSigner && files.FirstOrDefault(f => f.Key.CertificateSerialNumber != scuSigner.CertificateSerialNumber) is { } foreign)
+        {
+            throw new NotSupportedException(
+                $"The period {period} holds entries signed by the SCU certificate {foreign.Key.CertificateSerialNumber} ({foreign.Period}), and this queue only holds the key of its current SCU ({scuSigner.CertificateSerialNumber}). " +
+                "Export that period from the portal (fiskaltrust/market-fr#262, #177).");
+        }
+        if (files.Count > 1)
+        {
+            // A local export answers with one standalone file; the portal generates every file of a longer request.
+            throw new ArgumentException(
+                $"The requested period {period} gives {files.Count} archive files, and a local export delivers one (ADR 0019): request each file's period on its own: " +
+                string.Join("; ", files.Select(f => $"part {f.Part} {f.Period}, closed by {f.ClosedBy.ToManifestValue()}")) + ".");
+        }
+        var file = files[0];
+
+        metadata ??= new ArchiveMetadata(file.Records.Select(e => e.Siret).FirstOrDefault(s => !string.IsNullOrEmpty(s))
+            ?? throw new InvalidOperationException("The archive manifest needs the SIRET, and neither the queue configuration nor the archived entries carry one."), DateTime.UtcNow);
+        var context = new ArchiveV2Context { ComplianceParameters = await ComplianceParametersAsync(queueFR).ConfigureAwait(false) };
+        var packager = ArchiveV2Files.CreatePackager(_ => signer, context);
+
+        // The shared journal processor writes the whole export before it hands the content type over, so the name is set
+        // when the caller reads it.
+        contentType.Name = ArchivePackager<ArchiveEntry>.FileName(file);
+        await foreach (var chunk in ThroughTempFileAsync(stream => packager.WriteAsync(file, metadata, stream)).ConfigureAwait(false))
         {
             yield return chunk;
         }
@@ -275,38 +284,80 @@ public class JournalProcessorFR : IJournalProcessor
         => new[] { "key", "secret", "password", "token", "connection" }.Any(word => name.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0);
 
     /// <summary>
-    /// The signed v2 entries whose receipt moment falls in <paramref name="period"/>, in queue-row order,
-    /// chained on the entries before them.
+    /// How far around the period the storage is read. An item's TimeStamp is written with its response, after its
+    /// receipt moment; the margin covers a clock set back in between, and an entry kept between two of the period
+    /// whose moment lies past its end (contract section 10.3).
     /// </summary>
-    private async Task<List<ArchiveEntry>> ReadEntriesAsync(ArchivePeriod period, bool rejectV1)
+    private static readonly TimeSpan ReadMargin = TimeSpan.FromDays(1);
+
+    /// <summary>
+    /// The signed v2 entries stored around <paramref name="period"/>, in queue-row order: the candidates of
+    /// <see cref="ArchiveSplitter.Select{TRecord}"/>, which keeps those from the first in the period to the last.
+    /// Each entry carries its chain links as signed (ADR 0001), so the storage is read around the period only,
+    /// never replayed from the queue's first item (ADR 0012). The entries' requests and responses stay in a
+    /// spool file, not in memory. An item of the period that cannot be read fails the export.
+    /// </summary>
+    private async Task<SpooledEntries> ReadEntriesAsync(ArchivePeriod period, bool rejectV1)
     {
         var repository = await _queueItemRepository;
-        var linker = new ArchiveChainLinker();
-        var entries = new List<ArchiveEntry>();
-
-        // Linking needs queue-row order; the storage returns items by timestamp, which a sequential queue
-        // writes in the same order. A misordered pair would leave PreviousSignature empty, never wrong.
-        await foreach (var queueItem in repository.GetEntriesOnOrAfterTimeStampAsync(0).ConfigureAwait(false))
+        var spool = new ArchiveEntrySpool();
+        try
         {
-            var entry = ArchiveEntry.TryCreate(queueItem.ftQueueItemId, queueItem.ftQueueId, queueItem.ftQueueRow, queueItem.request, queueItem.response, queueItem.ProcessingVersion);
-            if (entry is null)
+            var entries = new List<ArchiveEntry>();
+            var from = Math.Max(0, period.Start.Ticks - ReadMargin.Ticks);
+            var to = period.End.Ticks > DateTime.MaxValue.Ticks - ReadMargin.Ticks ? DateTime.MaxValue.Ticks : period.End.Ticks + ReadMargin.Ticks;
+            await foreach (var queueItem in repository.GetByTimeStampRangeAsync(from, to).ConfigureAwait(false))
             {
-                if (rejectV1 && period.Contains(queueItem.ftQueueMoment) && IsV1Entry(queueItem))
+                ArchiveEntry? entry;
+                try
                 {
-                    throw new NotSupportedException(
-                        $"The period {period} holds entries of the v1 QueueFR (queue row {queueItem.ftQueueRow}). Their sub-archive format (ADR 0005) is not written by the QueueFR.v2 localization yet (fiskaltrust/market-fr#192): request the period from the first v2 entry on.");
+                    entry = ArchiveEntry.Read(queueItem.ftQueueItemId, queueItem.ftQueueId, queueItem.ftQueueRow, queueItem.request, queueItem.response, queueItem.ProcessingVersion);
                 }
-                continue;
+                catch (ArchiveEntryException) when (!period.Contains(MomentOf(queueItem)))
+                {
+                    continue;
+                }
+                if (entry is null)
+                {
+                    if (rejectV1 && period.Contains(MomentOf(queueItem)) && IsV1Entry(queueItem))
+                    {
+                        throw new NotSupportedException(
+                            $"The period {period} holds entries of the v1 QueueFR (queue row {queueItem.ftQueueRow}). They are archived by v1.2 as v1.2 produces its archive (ADR 0003, ADR 0019): request the period from the first v2 entry on.");
+                    }
+                    continue;
+                }
+                entries.Add(spool.Keep(entry, queueItem.response));
             }
 
-            linker.Link(entry);
-            if (period.Contains(entry.ReceiptMoment))
-            {
-                entries.Add(entry);
-            }
+            // The storage returns items by TimeStamp; the archive lists them in queue-row order.
+            entries.Sort((a, b) => a.QueueRow.CompareTo(b.QueueRow));
+            return new SpooledEntries(spool, entries);
+        }
+        catch
+        {
+            spool.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>Where a stored item falls in time: the receipt moment of its response, v1 and v2 alike, else its queue moment.</summary>
+    private static DateTime MomentOf(ftQueueItem queueItem)
+        => ArchiveEntry.ReceiptMomentOf(queueItem.response) ?? DateTime.SpecifyKind(queueItem.ftQueueMoment, DateTimeKind.Utc);
+
+    /// <summary>The entries of an export, and the spool that holds their content until the export is written.</summary>
+    private sealed class SpooledEntries : IDisposable
+    {
+        private readonly ArchiveEntrySpool _spool;
+
+        public SpooledEntries(ArchiveEntrySpool spool, List<ArchiveEntry> entries)
+        {
+            _spool = spool;
+            Entries = entries;
         }
 
-        return entries.OrderBy(e => e.QueueRow).ToList();
+        public List<ArchiveEntry> Entries { get; }
+
+        public void Dispose() => _spool.Dispose();
     }
 
     /// <summary>A v1 FR entry: signed with v1 signature types (<c>0x4652_0000_…</c>, no v2 format nibble).</summary>

@@ -28,7 +28,11 @@ public class FRArchiveBoundaries
 
     public Guid? LastActionJournalId { get; set; }
 
-    /// <summary>The last ftJournalFR row. The v2 queue writes none, so it is null unless a half-migrated queue's v1.2 rows exist.</summary>
+    /// <summary>
+    /// The last ftJournalFR row, as v1.2 signed it. The v2 queue writes no ftJournalFR and always leaves it null, a
+    /// half-migrated queue included (archive-v2 §1.4: <c>LastJournalFRID</c> stays empty); the field keeps its place
+    /// in the signed boundaries.
+    /// </summary>
     public Guid? LastJournalFRId { get; set; }
 
     /// <summary>The day totals before the archive receipt closes the day.</summary>

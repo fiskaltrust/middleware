@@ -81,10 +81,11 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
                 Lines = { new TestLine { Description = "Café", Amount = 2.5m }, new TestLine { Description = "Thé", Amount = 9.8m } }
             };
             var closing = new TestRecord { Chain = "Z", Moment = ticket.Moment.AddHours(1), Total = 12.30m };
-            var subArchive = new SubArchive<TestRecord>(ticket.Key, new ArchivePeriod(new DateTime(2024, 1, 1), new DateTime(2025, 1, 1)), new[] { ticket, closing }, ticket.Moment, closing.Moment);
+            var period = new ArchivePeriod(new DateTime(2024, 1, 1), new DateTime(2025, 1, 1));
+            var file = new ArchiveFile<TestRecord>(ticket.Key, new[] { ticket, closing }, ticket.Moment, closing.Moment, period, period, 1, 1, ArchiveClosedBy.PeriodEnd);
             var sink = new MemorySink();
 
-            await TestFixtures.Writer(ArchiveFormatVersion.V2).WriteAsync(subArchive, sink, CancellationToken.None);
+            await TestFixtures.Writer(ArchiveFormatVersion.V2).WriteAsync(file, sink, CancellationToken.None);
 
             sink.Files.Keys.Should().Equal("journal-T.csv", "journal-Z.csv", "charge-items.csv");
             var journal = sink.Files["journal-T.csv"];

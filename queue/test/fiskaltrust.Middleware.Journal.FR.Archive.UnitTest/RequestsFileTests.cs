@@ -29,7 +29,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             "\"cbChargeItems\":[{\"Amount\":1.234567890123456789012,\"Description\":\"Caf\\u00e9 <crème>\\n\\\"x\\\"\",\"Position\":1}]}";
 
         private static ArchiveEntry Entry(string request, long row = 1)
-            => ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, row, request, ArchiveV2FilesTests.Response($"ft{row}#T{row}", $"t{row}"))!;
+            => ArchiveEntry.Read(Guid.NewGuid(), QueueId, row, request, ArchiveV2FilesTests.Response($"ft{row}#T{row}", $"t{row}"))!;
 
         private static async Task<string> Write(params ArchiveEntry[] entries)
         {
@@ -88,15 +88,14 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             using var certificate = TestFixtures.EcdsaCertificate();
             using var output = new MemoryStream();
 
-            await new ArchivePackager<ArchiveEntry>(new[] { ArchiveV2Files.CreateWriter() }, new X509ArchiveSigner(certificate))
+            await ArchiveV2Files.CreatePackager(_ => new X509ArchiveSigner(certificate))
                 .WriteAsync(archive, new ArchiveMetadata("12345678901234", DateTime.UtcNow), output);
 
             var result = ArchiveVerifier.Verify(new MemoryStream(output.ToArray()));
             result.AllErrors.Should().BeEmpty();
-            result.SubArchives.Single().Manifest!.Files.Should().ContainSingle(f => f.Name == RequestsFile.Name && f.Hash.Length > 0 && f.Signature.Length > 0);
+            result.Manifest!.Files.Should().ContainSingle(f => f.Name == RequestsFile.Name && f.Hash.Length > 0 && f.Signature.Length > 0);
             using var zip = new ZipArchive(new MemoryStream(output.ToArray()));
-            using var sub = new ZipArchive(zip.Entries.Single(e => e.Name.StartsWith("subarchive_")).Open());
-            using var reader = new StreamReader(sub.GetEntry(RequestsFile.Name)!.Open(), Encoding.UTF8);
+            using var reader = new StreamReader(zip.GetEntry(RequestsFile.Name)!.Open(), Encoding.UTF8);
             var firstLine = (await reader.ReadLineAsync())!;
             JsonDocument.Parse(firstLine).RootElement.GetProperty("request").GetString().Should().Be(Stored);
         }
@@ -105,7 +104,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         public async Task The_verifier_reports_a_signed_but_malformed_requests_file()
         {
             // Signed and listed correctly, so only the shape check can catch it.
-            var writer = new CsvSubArchiveWriter<TestRecord>(ArchiveFormatVersion.V2, new ICsvFileDefinition<TestRecord>[]
+            var writer = new CsvArchiveWriter<TestRecord>(ArchiveFormatVersion.V2, new ICsvFileDefinition<TestRecord>[]
             {
                 new FlatCsvFile<TestRecord>(RequestsFile.Name, new[] { new CsvColumn<TestRecord>("ftQueueItemID", r => r.Id) }),
             });
@@ -114,7 +113,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             using var certificate = TestFixtures.EcdsaCertificate();
             using var output = new MemoryStream();
 
-            await new ArchivePackager<TestRecord>(new[] { writer }, new X509ArchiveSigner(certificate)).WriteAsync(archive, new ArchiveMetadata("12345678901234", DateTime.UtcNow), output);
+            await new ArchivePackager<TestRecord>(new[] { writer }, new X509ArchiveSigner(certificate), r => r.Describe()).WriteAsync(archive, new ArchiveMetadata("12345678901234", DateTime.UtcNow), output);
 
             ArchiveVerifier.Verify(new MemoryStream(output.ToArray())).AllErrors.Should().Contain(e => e.Contains(RequestsFile.Name) && e.Contains("not valid JSON"));
         }
