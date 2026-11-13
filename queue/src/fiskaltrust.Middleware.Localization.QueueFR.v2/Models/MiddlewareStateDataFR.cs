@@ -93,6 +93,30 @@ public class MiddlewareStateDataFR
     public fiskaltrust.ifPOS.v2.fr.FRMigrationEvent? Migration { get; set; }
 
     /// <summary>
+    /// On 0x4001 (Queue-start receipt): the queue's processing version, the one stored with its queue item. The
+    /// InfoCert SCU signs it in the R19 JET string (ADR 0021). Omitted on every other receipt.
+    /// </summary>
+    [JsonPropertyName(fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers.FRStateData.VersionProperty)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Version { get; set; }
+
+    /// <summary>
+    /// On 0x4021 (Initiate migration): the last v1.2 queue item the queue's storage holds. The InfoCert SCU signs it in
+    /// the R19 JET string (ADR 0021). Omitted when the storage holds none (the cloud cashbox) and on every other receipt.
+    /// </summary>
+    [JsonPropertyName(fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers.FRStateData.LastV1QueueItemIdProperty)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? LastV1QueueItemId { get; set; }
+
+    /// <summary>
+    /// On 0x4021 (Initiate migration): the queue item of the last v1.2 archive receipt (<c>ftQueueFR.ALastQueueItemId</c>).
+    /// The InfoCert SCU signs it in the R19 JET string (ADR 0021). Omitted when v1.2 never archived and on every other receipt.
+    /// </summary>
+    [JsonPropertyName(fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers.FRStateData.V1ArchiveQueueItemIdProperty)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? V1ArchiveQueueItemId { get; set; }
+
+    /// <summary>
     /// The receipt's totals as the queue computed them when it signed: the receipt's own totals on the
     /// sales chains, the period and perpetual totals on a closing. The archive reads them from here, so
     /// they are stored data and never recomputed at export (archive-v2 §1.2, §1.3).

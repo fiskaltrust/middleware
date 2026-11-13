@@ -97,6 +97,15 @@ public static class FRStateData
     public const string OriginReceiptIdentificationProperty = "OriginReceiptIdentification";
     public const string CopiedReceiptCaseProperty = "CopiedReceiptCase";
 
+    /// <summary>On 0x4001 (Queue-start receipt): the queue's processing version, as stored with its queue item (ADR 0021).</summary>
+    public const string VersionProperty = "Version";
+
+    /// <summary>On 0x4021 (Initiate migration): the last v1.2 queue item the queue's storage holds, if any (ADR 0021).</summary>
+    public const string LastV1QueueItemIdProperty = "LastV1QueueItemId";
+
+    /// <summary>On 0x4021 (Initiate migration): the queue item of the last v1.2 archive receipt, if any (ADR 0021).</summary>
+    public const string V1ArchiveQueueItemIdProperty = "V1ArchiveQueueItemId";
+
     /// <summary>
     /// A number of the FR block (<c>ftStateData.FR.&lt;name&gt;</c>), written as a JSON number or as a hex string
     /// (<c>0x…</c>), e.g. <see cref="CopiedReceiptCaseProperty"/>. Null when absent or unreadable.

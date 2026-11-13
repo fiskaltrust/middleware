@@ -48,11 +48,18 @@ public class FRMigration
     public async Task<ProcessCommandResponse?> InitiateAsync(ProcessCommandRequest request)
     {
         var v1 = await ReadV1ItemsAsync().ConfigureAwait(false);
-        var refusal = await _chains.ReadAsync(queueFR => Refusal(request, queueFR, v1)).ConfigureAwait(false);
+        var (refusal, v1ArchiveQueueItemId) = await _chains.ReadAsync(queueFR => (Refusal(request, queueFR, v1), queueFR.ALastQueueItemId)).ConfigureAwait(false);
         if (refusal is not null)
         {
             return Refused(request, refusal);
         }
+
+        // ADR 0021: the InfoCert SCU signs where v1.2 stopped in the R19 JET string of this entry.
+        var stateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
+        stateData.FR ??= new MiddlewareStateDataFR();
+        stateData.FR.LastV1QueueItemId = v1.LastQueueItemId;
+        stateData.FR.V1ArchiveQueueItemId = v1ArchiveQueueItemId;
+        request.ReceiptResponse.ftStateData = stateData;
 
         return await _pipeline.SignAsync(request).ConfigureAwait(false);
     }
@@ -106,12 +113,13 @@ public class FRMigration
     }
 
     /// <summary>What stored v1.2 queue items tell, when the v2 queue's storage still holds them (none in the cloud cashbox).</summary>
-    private sealed record V1Items(DateTime? LastDayEntryMoment, IReadOnlyDictionary<string, (long Counter, string Signature)> LastSignatures);
+    private sealed record V1Items(DateTime? LastDayEntryMoment, IReadOnlyDictionary<string, (long Counter, string Signature)> LastSignatures, Guid? LastQueueItemId = null);
 
     private async Task<V1Items> ReadV1ItemsAsync()
     {
         var signatures = new Dictionary<string, (long, string)>(StringComparer.Ordinal);
         DateTime? lastDayEntry = null;
+        Guid? lastQueueItemId = null;
         if (_queueItems is null)
         {
             return new V1Items(null, signatures);
@@ -146,6 +154,8 @@ public class FRMigration
                 continue;
             }
 
+            lastQueueItemId ??= item.ftQueueItemId;
+
             // v1.2 counts its tickets (0x01) and invoices (0x03) into the day.
             if (lastDayEntry is null && ((long) request.ftReceiptCase & 0xFFFF) is 0x0001 or 0x0003)
             {
@@ -161,6 +171,6 @@ public class FRMigration
             }
         }
 
-        return new V1Items(lastDayEntry, signatures);
+        return new V1Items(lastDayEntry, signatures, lastQueueItemId);
     }
 }

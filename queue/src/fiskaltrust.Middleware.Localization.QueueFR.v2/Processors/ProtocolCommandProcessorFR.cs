@@ -44,21 +44,28 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
     /// <summary>
     /// A JET event is validated here, before any SCU signs it, so every certification body refuses the
     /// same malformed events (one JET behaviour, market-fr#200): a refused event takes no number of
-    /// chain L. The InfoCert SCU still reads the event to sign its R19 content.
+    /// its chain. Training events are checked too: the InfoCert SCU signs every 0x3001 as an R19 JET
+    /// string (ADR 0021).
     /// </summary>
-    public Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request)
+    public Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request) => SignPosEventAsync(request);
+
+    /// <summary>
+    /// An accounting event carries the R19 event the POS sends, like 0x3001, with an accounting code
+    /// only: 160, 180 or an editor code from 900 up (ADR 0021). Refused alike whichever SCU signs.
+    /// </summary>
+    public Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => SignPosEventAsync(request);
+
+    private Task<ProcessCommandResponse> SignPosEventAsync(ProcessCommandRequest request)
     {
-        if (FRJetEvent.IsJetEvent(request.ReceiptRequest) && !FRJetEvent.TryRead(request.ReceiptRequest, out _, out var error))
+        if (!FRJetEvent.TryReadFor(request.ReceiptRequest, out _, out var error))
         {
-            request.ReceiptResponse.SetReceiptResponseError($"The technical event cannot enter the NF525 technical event journal: {error}");
+            request.ReceiptResponse.SetReceiptResponseError($"The event cannot enter the NF525 technical event journal: {error}");
             request.ReceiptResponse.ftState = (State) StateFR.Error;
             return Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, []));
         }
 
         return _pipeline.SignAsync(request);
     }
-
-    public Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
 
     /// <summary>v1.2 does not sign an internal consumption (v0 0x0D), except in training, where it is signed on chain X.</summary>
     public Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => _pipeline.SignTrainingOrStoreAsync(request);

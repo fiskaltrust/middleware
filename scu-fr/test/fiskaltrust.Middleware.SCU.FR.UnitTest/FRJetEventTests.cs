@@ -70,13 +70,59 @@ public class InfoCertJetEventTests
         signature.Should().NotBeEmpty();
     }
 
+    /// <summary>ADR 0021: a training 0x3001 is signed as an R19 JET string on chain X too, so its event must read.</summary>
     [Fact]
-    public async Task TrainingTechnicalEvent_IsNotCheckedAsAJournalEntry()
+    public async Task TrainingTechnicalEvent_IsCheckedLikeAnyEvent()
     {
         var (response, signature) = await SignAsync(TechnicalEvent(null, training: true));
 
+        response.ReceiptResponse.ftState.Should().Be((State) StateFR.Error);
+        signature.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ValidTrainingTechnicalEvent_IsSigned()
+    {
+        var (response, signature) = await SignAsync(TechnicalEvent(Json("{\"FR\":{\"Code\":\"90\",\"Message\":\"Archivage\"}}"), training: true));
+
         response.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
         signature.Should().NotBeEmpty();
+    }
+
+    [Theory]
+    [InlineData(160, true)]
+    [InlineData(180, true)]
+    [InlineData(900, true)]
+    [InlineData(20, false)]
+    [InlineData(260, false)]
+    [InlineData(11, false)]
+    public void AccountingEvent_AcceptsOnlyAccountingCodes(int code, bool accepted)
+    {
+        var request = TechnicalEvent(Json($"{{\"FR\":{{\"Code\":\"{code}\",\"Message\":\"Événement\"}}}}")).ReceiptRequest;
+        request.ftReceiptCase = ReceiptCase.ProtocolAccountingEvent0x3002.WithCountry("FR");
+
+        FRJetEvent.TryReadFor(request, out _, out var error).Should().Be(accepted, error);
+    }
+
+    [Fact]
+    public async Task AccountingEventWithATechnicalCode_IsRefusedInTheResponse()
+    {
+        var request = TechnicalEvent(Json("{\"FR\":{\"Code\":\"20\",\"Message\":\"Archivage\"}}"));
+        request.ReceiptRequest.ftReceiptCase = ReceiptCase.ProtocolAccountingEvent0x3002.WithCountry("FR");
+
+        var (response, signature) = await SignAsync(request);
+
+        response.ReceiptResponse.ftState.Should().Be((State) StateFR.Error);
+        signature.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TryReadFor_LeavesTheTechnicalEventRulesUnchanged()
+    {
+        var request = TechnicalEvent(Json("{\"FR\":{\"Code\":\"20\",\"Message\":\"Archivage\"}}")).ReceiptRequest;
+
+        FRJetEvent.TryReadFor(request, out var jetEvent, out _).Should().BeTrue();
+        jetEvent!.Code.Should().Be(20);
     }
 
     [Theory]

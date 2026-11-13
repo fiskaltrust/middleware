@@ -25,6 +25,11 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 /// </remarks>
 public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
 {
+    /// <summary>The version the shared queue stores with every queue item (<c>ftQueueItem.ProcessingVersion</c>).</summary>
+    public static readonly string? ProcessingVersion = typeof(QueueStorageProvider).Assembly
+        .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+        .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion;
+
     private readonly IFRSSCD _sscd;
     private readonly FRSigningPipeline _pipeline;
     private readonly ILocalizedQueueStorageProvider _localizedQueueStorageProvider;
@@ -70,6 +75,13 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
 
         var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
+
+        // ADR 0021: the InfoCert SCU signs the version the queue starts with in the R19 JET string of this entry; it is
+        // the processing version stored with the queue item, so the archive can recompute the string.
+        var stateData = MiddlewareStateData.FromReceiptResponse(receiptResponse);
+        stateData.FR ??= new MiddlewareStateDataFR();
+        stateData.FR.Version = ProcessingVersion;
+        receiptResponse.ftStateData = stateData;
 
         var response = await _pipeline.SignAsync(request, [actionJournal]).ConfigureAwait(false);
         if (!FRSigningPipeline.Succeeded(response))

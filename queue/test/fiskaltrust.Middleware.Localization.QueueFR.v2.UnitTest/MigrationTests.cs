@@ -182,6 +182,29 @@ public class MigrationTests
         _sscd.Calls.Last().previousSignature.Should().Be("djEtdGlja2V0LXNpZw");
     }
 
+    /// <summary>ADR 0021: 0x4021 hands the SCU where v1.2 stopped, which the InfoCert SCU signs in its R19 JET string (code 910).</summary>
+    [Fact]
+    public async Task InitiateMigration_HandsOverTheLastV1QueueItemAndTheV1ArchiveReceipt()
+    {
+        await StoreV1EntryAsync(row: 1, "ft77#T119", "eyJhbGciOiJFUzI1NiJ9.eyJ9.c2lnLTE");
+        var last = await StoreV1EntryAsync(row: 2, "ft77#T120", "eyJhbGciOiJFUzI1NiJ9.eyJ9.c2lnLTI");
+        var archive = (await _state.ReadAsync()).ALastQueueItemId;
+
+        var response = Stored(await InitiateAsync());
+
+        FRStateData.Text(response, FRStateData.LastV1QueueItemIdProperty).Should().Be(last.ToString("D"));
+        FRStateData.Text(response, FRStateData.V1ArchiveQueueItemIdProperty).Should().Be(archive!.Value.ToString("D"));
+    }
+
+    [Fact]
+    public async Task InitiateMigration_WithoutStoredV1Items_HandsOverOnlyTheArchiveReceipt()
+    {
+        var response = Stored(await InitiateAsync());
+
+        FRStateData.Text(response, FRStateData.LastV1QueueItemIdProperty).Should().BeNull("the cloud cashbox holds no v1.2 queue items");
+        FRStateData.Text(response, FRStateData.V1ArchiveQueueItemIdProperty).Should().NotBeNull();
+    }
+
     [Fact]
     public async Task ATrainingMigrationReceipt_IsRefused()
     {
@@ -296,7 +319,7 @@ public class MigrationTests
 
     private static ReceiptResponse Stored(ReceiptResponse response) => JsonSerializer.Deserialize<ReceiptResponse>(JsonSerializer.Serialize(response))!;
 
-    private async Task StoreV1EntryAsync(long row, string identification, string jws)
+    private async Task<Guid> StoreV1EntryAsync(long row, string identification, string jws)
     {
         var request = new ReceiptRequest { ftReceiptCase = (ReceiptCase) 0x4652_0000_0000_0001, cbChargeItems = [], cbPayItems = [] };
         var response = new ReceiptResponse
@@ -305,14 +328,16 @@ public class MigrationTests
             ftState = (State) 0x4652_0000_0000_0000,
             ftSignatures = [new SignatureItem { ftSignatureType = (SignatureType) 0x4652_0000_0000_0001, ftSignatureFormat = SignatureFormat.QRCode, Data = jws }],
         };
+        var id = Guid.NewGuid();
         await _queueItems.InsertOrUpdateAsync(new ftQueueItem
         {
-            ftQueueItemId = Guid.NewGuid(),
+            ftQueueItemId = id,
             ftQueueRow = row,
             ftQueueMoment = LastDailyClosing.AddHours(-1),
             TimeStamp = LastDailyClosing.AddHours(-1).Ticks,
             request = JsonSerializer.Serialize(request),
             response = JsonSerializer.Serialize(response),
         });
+        return id;
     }
 }

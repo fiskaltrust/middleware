@@ -339,6 +339,20 @@ public class ProcessorTests
         storage.Verify(x => x.ActivateQueueAsync(), Times.Once);
     }
 
+    /// <summary>ADR 0021: 0x4001 hands the SCU the processing version stored with the queue item; the InfoCert SCU signs it (R19 260).</summary>
+    [Fact]
+    public async Task InitialOperation_HandsOverTheProcessingVersion()
+    {
+        var (pipeline, sscd) = CreatePipeline();
+        var sut = new LifecycleCommandProcessorFR(sscd, pipeline, new Mock<ILocalizedQueueStorageProvider>().Object);
+
+        var response = await sut.InitialOperationReceipt0x4001Async(CommandRequest(ReceiptCase.InitialOperationReceipt0x4001));
+
+        var stored = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(System.Text.Json.JsonSerializer.Serialize(response.receiptResponse))!;
+        LifecycleCommandProcessorFR.ProcessingVersion.Should().NotBeNullOrEmpty();
+        SCU.FR.Abstraction.Helpers.FRStateData.Text(stored, SCU.FR.Abstraction.Helpers.FRStateData.VersionProperty).Should().Be(LifecycleCommandProcessorFR.ProcessingVersion);
+    }
+
     [Fact]
     public async Task OutOfOperation_SignsBeforeDeactivating()
     {

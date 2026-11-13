@@ -146,6 +146,17 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         [InlineData(0x4652_2000_0000_2011, "ft1#Z3", "1000:440,440,9000,20260301100001,ft1#Z3:20260228100000-20260301100001,O,p2")]
         [InlineData(0x4652_2000_0000_3001, "ft1#L3", "ft1#L3,20,info,20260301100001,Ana,cashbox-fr,O,p2")]
         [InlineData(0x4652_2000_0002_0001, "ft1#X3", "1000:440,440,20260301100001,ft1#X3,FORMATION-VENTE,O,p2")]
+        // ADR 0021: the entries R13/R12 do not cover sign TAG-GTX (the queue stop) or TAG-JET.
+        [InlineData(0x4652_2000_0000_4002, "ft1#E3", "1000:440,440,9000,20260301100001,ft1#E3:20260228100000-20260301100001,1000:440,440,9000,20260301100001,ft1#E3:20260201000000-20260301100001,1000:440,440,9000,20260301100001,ft1#E3:20260101000000-20260301100001,O,p2")]
+        [InlineData(0x4652_2000_0000_4001, "ft1#E3", "ft1#E3,260,queue:11111111-2222-3333-4444-555555555555;scu:InfoCert;version:1.3.80,20260301100001,Ana,cashbox-fr,O,p2")]
+        [InlineData(0x4652_2000_0000_2000, "ft1#E3", "ft1#E3,900,,20260301100001,Ana,cashbox-fr,O,p2")]
+        [InlineData(0x4652_2000_0000_2001, "ft1#E3", "ft1#E3,901,,20260301100001,Ana,cashbox-fr,O,p2")]
+        [InlineData(0x4652_2000_0000_4021, "ft1#E3", "ft1#E3,910,v1:;archive:,20260301100001,Ana,cashbox-fr,O,p2")]
+        [InlineData(0x4652_2000_0000_4022, "ft1#E3", "ft1#E3,911,T:41:aGFzaA==:c2ln,20260301100001,Ana,cashbox-fr,O,p2")]
+        [InlineData(0x4652_2000_0000_3002, "ft1#L3", "ft1#L3,160,clôture,20260301100001,Ana,cashbox-fr,O,p2")]
+        [InlineData(0x4652_2000_0002_3000, "ft1#X3", "ft1#X3,920,,20260301100001,Ana,cashbox-fr,O,p2")]
+        [InlineData(0x4652_2000_0002_3001, "ft1#X3", "ft1#X3,90,,20260301100001,Ana,cashbox-fr,O,p2")]
+        [InlineData(0x4652_2000_0002_3003, "ft1#X3", "ft1#X3,921,total:1750,20260301100001,Ana,cashbox-fr,O,p2")]
         public void Read_TakesTheCounterFromTheIdentificationFieldOfEveryString(long receiptCase, string identification, string signed)
         {
             var entry = Read(Request(receiptCase), Response(identification, StringJws(signed, "s3")))!;
@@ -167,6 +178,17 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             entry.StartOfChain.Should().BeTrue();
         }
 
+        [Theory]
+        [InlineData(0x4652_2000_0000_2000, "ft1#E3", "ft1#E3,900,,20260301100001,Ana,O,p2")]
+        [InlineData(0x4652_2000_0000_4002, "ft1#E3", "1000:440,440,9000,20260301100001,O,p2")]
+        public void Read_FailsOnAJetOrGrandTotalsStringOfTheWrongShape(long receiptCase, string identification, string signed)
+        {
+            var act = () => Read(Request(receiptCase), Response(identification, StringJws(signed, "s3")));
+
+            act.Should().Throw<ArchiveEntryException>();
+        }
+
+        /// <summary>InfoCert sandbox entries of chain E signed the 25-field data set before ADR 0021; they stay readable.</summary>
         [Fact]
         public void Read_TakesTheDataSetOfAChainEEntry_FromTheJwsPayload()
         {

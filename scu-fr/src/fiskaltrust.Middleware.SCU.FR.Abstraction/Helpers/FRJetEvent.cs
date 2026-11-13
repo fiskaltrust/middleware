@@ -45,11 +45,48 @@ public sealed record FRJetEvent(int Code, string Label, string? Information, str
 
     /// <summary>
     /// True for a receipt that is a JET event: a non-training <c>ProtocolTechnicalEvent 0x3001</c>.
-    /// The other log cases (0x3000, 0x3002, 0x3003) stay on chain L with the generic content.
     /// </summary>
     public static bool IsJetEvent(ReceiptRequest request)
         => request.ftReceiptCase.Case() == ReceiptCase.ProtocolTechnicalEvent0x3001
            && !request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training);
+
+    /// <summary>
+    /// True for a receipt whose event the POS sends and the queue checks before any SCU signs it: 0x3001 (Protocol,
+    /// technical event) and 0x3002 (Protocol, audit / accounting event), training or not (ADR 0021).
+    /// </summary>
+    public static bool CarriesPosEvent(ReceiptRequest request)
+        => request.ftReceiptCase.Case() is ReceiptCase.ProtocolTechnicalEvent0x3001 or ReceiptCase.ProtocolAccountingEvent0x3002;
+
+    /// <summary>
+    /// A code a POS may send on 0x3002 (Protocol, audit / accounting event): R19 160 or 180, or a publisher code (900 and
+    /// above) (ADR 0021). The other R19 codes are technical events, sent on 0x3001.
+    /// </summary>
+    public static bool IsAccountingEventCode(int code) => FRJetCodes.AccountingEventCodes.Contains(code) || code >= FirstEditorCode;
+
+    /// <summary>
+    /// Reads the event the POS sent, as <see cref="TryRead"/>, and on 0x3002 (Protocol, audit / accounting event) also
+    /// refuses a code that is not an accounting event code (<see cref="IsAccountingEventCode"/>).
+    /// </summary>
+    public static bool TryReadFor(ReceiptRequest request, out FRJetEvent? jetEvent, out string? error)
+    {
+        if (!TryRead(request, out jetEvent, out error))
+        {
+            return false;
+        }
+
+        if (request.ftReceiptCase.Case() == ReceiptCase.ProtocolAccountingEvent0x3002 && !IsAccountingEventCode(jetEvent!.Code))
+        {
+            error = $"ftReceiptCaseData.FR.Code {jetEvent.Code} is not an accounting event code: 0x3002 accepts 160, 180 (R19 v4.2) or an editor code (>= {FirstEditorCode}).";
+            jetEvent = null;
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>The contextual information (<c>ftReceiptCaseData.FR.Information</c>) the POS sent, if any; no code is required.</summary>
+    public static string? InformationOf(ReceiptRequest request)
+        => MarketBlock(AsObject(request.ftReceiptCaseData)) is { } root ? NullIfEmpty(Property(root, "Information")) : null;
 
     /// <summary>
     /// Reads the JET event from the receipt. Fails with a reason when the case data is missing,

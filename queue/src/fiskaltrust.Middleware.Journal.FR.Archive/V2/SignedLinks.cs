@@ -160,7 +160,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// <list type="bullet">
         /// <item>a JSON object (InfoCert entries signed before market-fr#221, kept readable): <c>chainCounter</c>,
         /// <c>previousSignatureCarriedOver</c>, <c>previousSignature</c>, <c>siret</c>, <c>csn</c>, the issuer claims;</item>
-        /// <item>the 25-field data set, recognised by its 25 <c>|</c> fields with the entry's identification at field 11;</item>
+        /// <item>the 25-field data set (InfoCert sandbox entries of chain E, L and X signed before ADR 0021, kept readable),
+        /// recognised by its 25 <c>|</c> fields with the entry's identification at field 11;</item>
         /// <item>an R13/R12/R19 string (InfoCert): <c>,</c>-separated, the flag and the previous signature last, the chain
         /// counter in the identification field, which is <c>ftReceiptIdentification</c>. No SIRET, serial number, request
         /// value or issuer claim is signed in it.</item>
@@ -229,22 +230,27 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             return new SignedLinks(counter, fields[n - 2], fields[n - 1], null, keyId, null, null, jws: true);
         }
 
-        /// <summary>The R13/R12/R19 string of a receipt case, as the Infocert SCU chooses it (training flag ignored).</summary>
-        private enum ReferentialString { NoteTicket, PaymentProof, Invoice, Duplicate, GrandTotals, Archive, Jet, DataSet }
+        /// <summary>
+        /// The R13/R12/R19 string of a receipt case, as the Infocert SCU chooses it (training flag ignored, ADR 0021): the
+        /// queue stop 0x4002 signs the grand totals; the protocol cases 0x3000–0x3003, the zero and one receipts, the queue
+        /// start and the migration receipts sign the JET string. <see cref="ReferentialString.None"/> for a case the SCU never
+        /// signs, whose shape is not checked.
+        /// </summary>
+        private enum ReferentialString { NoteTicket, PaymentProof, Invoice, Duplicate, GrandTotals, Archive, Jet, None }
 
         private static ReferentialString KindOf(long receiptCase)
         {
-            var training = (receiptCase & 0x0000_0000_0002_0000) != 0;
             switch (receiptCase & 0xFFFF)
             {
                 case 0x0000: case 0x0001: case 0x0004: case 0x0003: case 0x0005: case 0x0006: case 0x3004: return ReferentialString.NoteTicket;
                 case 0x0002: case 0x3005: return ReferentialString.PaymentProof;
                 case 0x0007: case 0x1000: case 0x1001: case 0x1002: case 0x1003: return ReferentialString.Invoice;
                 case 0x3010: return ReferentialString.Duplicate;
-                case 0x2010: case 0x2011: case 0x2012: case 0x2013: return ReferentialString.GrandTotals;
+                case 0x2010: case 0x2011: case 0x2012: case 0x2013: case 0x4002: return ReferentialString.GrandTotals;
                 case 0x3011: return ReferentialString.Archive;
-                case 0x3001: return training ? ReferentialString.DataSet : ReferentialString.Jet;
-                default: return ReferentialString.DataSet;
+                case 0x3000: case 0x3001: case 0x3002: case 0x3003:
+                case 0x2000: case 0x2001: case 0x4001: case 0x4021: case 0x4022: return ReferentialString.Jet;
+                default: return ReferentialString.None;
             }
         }
 

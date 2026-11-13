@@ -18,7 +18,7 @@ namespace fiskaltrust.Middleware.SCU.FR.UnitTest.InfoCert;
 
 /// <summary>
 /// The strings the Infocert SCU signs as its JWS payload (market-fr#108, #221): R13 v4.2 §7, R12 v4.2 §7 and R19 v4.2,
-/// formatted per their §4 (cents, AAAAMMJJHHMMSS, rate:amount|…, ',' between fields), and the 25-field data set on chain E.
+/// formatted per their §4 (cents, AAAAMMJJHHMMSS, rate:amount|…, ',' between fields); no other grammar (ADR 0021).
 /// </summary>
 public class InfoCertSignedStringTests
 {
@@ -37,7 +37,7 @@ public class InfoCertSignedStringTests
     };
 
     private static string Build(ProcessRequest request, string? previousSignature = null)
-        => InfoCertSignedString.Build(request, previousSignature, Configuration());
+        => InfoCertSignedString.Build(request, previousSignature);
 
     private static ProcessRequest WithCase(long receiptCase, string identification, bool training = false)
     {
@@ -391,36 +391,177 @@ public class InfoCertSignedStringTests
         Build(request, PreviousSignature).Should().Be($"L7,20,période; 2026-02,20260301100000,Marie,cashbox-fr,O,{PreviousSignature}");
     }
 
-    [Fact]
-    public void ChainE_SignsThe25FieldDataSet()
+    /// <summary>An entry of chain E, L or X without items, sent by "Marie".</summary>
+    private static ProcessRequest Event(long receiptCase, string identification, bool training = false)
     {
-        var request = WithCase(0x2000, "E9");
-        request.ChainCounter = 9;
+        var request = WithCase(receiptCase, identification, training);
         request.ReceiptRequest.cbChargeItems = [];
         request.ReceiptRequest.cbPayItems = [];
+        request.ReceiptRequest.cbUser = "Marie";
+        return request;
+    }
 
-        var fields = Build(request, PreviousSignature).Split('|');
+    private static void PosEvent(ProcessRequest request, object code, string? information = null)
+        => request.ReceiptRequest.ftReceiptCaseData = new Dictionary<string, object> { ["FR"] = new Dictionary<string, object?> { ["Code"] = code, ["Message"] = "Événement", ["Information"] = information } };
 
-        fields.Should().HaveCount(25);
-        fields[0].Should().Be(FRTestData.Siret);
-        fields[1].Should().Be("RCS Nanterre B 642036065");
-        fields[3].Should().Be("SAS, au capital de 500000 EUR");
-        fields[5].Should().BeEmpty("field 6 is reserved: the configured electronic address is not signed");
-        fields[8].Should().StartWith("1:", "the canonical request value, as the LNE SCU signs it");
-        fields[10].Should().Be("E9");
-        fields[21].Should().Be("CERT-4711");
-        fields[22..].Should().Equal("9", "O", PreviousSignature);
+    /// <summary>ADR 0021 rule 1: 0x4002 (Queue-stop receipt) closes the day, the month and the year, and signs TAG-GTX like a yearly closing.</summary>
+    [Fact]
+    public void QueueStop_SignsTheGrandTotalsOfEveryClosedPeriod()
+    {
+        var request = Event(0x4002, "E12");
+        var day = new FRTotals { Totalizer = 12.10m, ByRate = new() { ["20"] = 10.00m, ["2.1"] = 2.10m } };
+        var month = new FRTotals { Totalizer = 112.10m, ByRate = new() { ["20"] = 110.00m, ["2.1"] = 2.10m } };
+        var year = new FRTotals { Totalizer = 512.10m, ByRate = new() { ["20"] = 500.00m, ["5.5"] = 10.00m, ["2.1"] = 2.10m } };
+        request.PeriodTotals = new FRPeriodTotals
+        {
+            Period = FRTotalsPeriod.Year,
+            Current = year,
+            Perpetual = new FRTotals { Totalizer = 1000.00m },
+            Closed = [new FRPeriodTotal { Period = FRTotalsPeriod.Day, Totals = day }, new FRPeriodTotal { Period = FRTotalsPeriod.Month, Totals = month }, new FRPeriodTotal { Period = FRTotalsPeriod.Year, Totals = year }],
+        };
+        StateData(request, new() { ["Closing"] = new Dictionary<string, object> { ["Periods"] = new[]
+        {
+            new Dictionary<string, object> { ["Period"] = "Day", ["Start"] = new DateTime(2026, 2, 28, 22, 0, 0, DateTimeKind.Utc) },
+            new Dictionary<string, object> { ["Period"] = "Month", ["Start"] = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Dictionary<string, object> { ["Period"] = "Year", ["Start"] = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+        } } });
+
+        Build(request, PreviousSignature).Should().Be(
+            "2000:1000|0210:210,1210,100000,20260301100000,E12:20260228220000-20260301100000," +
+            "2000:11000|0210:210,11210,100000,20260301100000,E12:20260201000000-20260301100000," +
+            "2000:50000|0550:1000|0210:210,51210,100000,20260301100000,E12:20260101000000-20260301100000," +
+            $"O,{PreviousSignature}");
+    }
+
+    /// <summary>ADR 0021 rule 2: 0x4001 (Queue-start receipt) signs R19 260 with the queue, the SCU kind and the version.</summary>
+    [Fact]
+    public void QueueStart_SignsJet260()
+    {
+        var request = Event(0x4001, "E1");
+        StateData(request, new() { ["Version"] = "1.3.80+g1a2b3c" });
+
+        Build(request).Should().Be("E1,260,queue:11111111-1111-1111-1111-111111111111;scu:InfoCert;version:1.3.80+g1a2b3c,20260301100000,Marie,cashbox-fr,N,");
     }
 
     [Fact]
-    public void FinishMigration_SignsTheMigrationEventInField20()
-    {
-        var request = WithCase(0x4022, "E2");
-        request.ReceiptRequest.cbChargeItems = [];
-        request.ReceiptRequest.cbPayItems = [];
-        StateData(request, new() { ["Migration"] = new FRMigrationEvent { Chains = [new FRV1ChainHead { Chain = "T", Counter = 41, LastHash = "h", LastSignature = "s" }] } });
+    public void ZeroReceipt_SignsJet900_WithoutFlagsEmpty()
+        => Build(Event(0x2000, "E5"), PreviousSignature).Should().Be($"E5,900,,20260301100000,Marie,cashbox-fr,O,{PreviousSignature}");
 
-        Build(request).Split('|')[19].Should().Be("T,41,h,s");
+    [Fact]
+    public void ZeroReceipt_SignsTheRequestedFlags()
+    {
+        var request = Event(0x2000, "E5");
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase) ((long) request.ReceiptRequest.ftReceiptCase | 0x0000_0002_0000_0000);
+
+        Build(request).Split(',')[2].Should().Be("request:0000000200000000");
+    }
+
+    [Fact]
+    public void OneReceipt_SignsJet901()
+        => Build(Event(0x2001, "E6")).Should().Be("E6,901,,20260301100000,Marie,cashbox-fr,N,");
+
+    [Fact]
+    public void InitiateMigration_SignsJet910_WithWhereV1Stopped()
+    {
+        var request = Event(0x4021, "E1");
+        StateData(request, new() { ["LastV1QueueItemId"] = "aaaaaaaa-0000-0000-0000-000000000001", ["V1ArchiveQueueItemId"] = "bbbbbbbb-0000-0000-0000-000000000002" });
+
+        Build(request).Should().Be("E1,910,v1:aaaaaaaa-0000-0000-0000-000000000001;archive:bbbbbbbb-0000-0000-0000-000000000002,20260301100000,Marie,cashbox-fr,N,");
+    }
+
+    [Fact]
+    public void InitiateMigration_WithoutStoredV1Items_SignsEmptyValues()
+        => Build(Event(0x4021, "E1")).Split(',')[2].Should().Be("v1:;archive:");
+
+    /// <summary>ADR 0003 and 0021: the migration event, one record per v1 chain, is signed in TAG-JET-LIB.</summary>
+    [Fact]
+    public void FinishMigration_SignsJet911_WithTheMigrationEvent()
+    {
+        var request = Event(0x4022, "E2");
+        StateData(request, new() { ["Migration"] = new FRMigrationEvent { Chains =
+        [
+            new FRV1ChainHead { Chain = "T", Counter = 41, LastHash = "aGFzaA==", LastSignature = "c2ln" },
+            new FRV1ChainHead { Chain = "G", Counter = 3, LastHash = "Zw==" },
+        ] } });
+
+        Build(request, PreviousSignature).Should().Be($"E2,911,T:41:aGFzaA==:c2ln;G:3:Zw==:,20260301100000,Marie,cashbox-fr,O,{PreviousSignature}");
+    }
+
+    [Fact]
+    public void FinishMigration_RefusesAValueHoldingASeparator()
+    {
+        var request = Event(0x4022, "E2");
+        StateData(request, new() { ["Migration"] = new FRMigrationEvent { Chains = [new FRV1ChainHead { Chain = "T", Counter = 1, LastHash = "a:b" }] } });
+
+        var act = () => Build(request);
+
+        act.Should().Throw<FRValidationException>();
+    }
+
+    [Theory]
+    [InlineData(160)]
+    [InlineData(180)]
+    [InlineData(905)]
+    public void AccountingEvent_SignsTheCodeThePosSent(int code)
+    {
+        var request = Event(0x3002, "L4");
+        PosEvent(request, code, "clôture, comptable");
+
+        Build(request).Should().Be($"L4,{code},clôture; comptable,20260301100000,Marie,cashbox-fr,N,");
+    }
+
+    [Theory]
+    [InlineData(20)]
+    [InlineData(260)]
+    public void AccountingEvent_WithATechnicalCode_IsRefused(int code)
+    {
+        var request = Event(0x3002, "L4");
+        PosEvent(request, code);
+
+        var act = () => Build(request);
+
+        act.Should().Throw<FRValidationException>().WithMessage("*0x3002 accepts 160, 180*");
+    }
+
+    [Fact]
+    public void TrainingTechnicalEvent_SignsTheCodeThePosSent_OnChainX()
+    {
+        var request = Event(0x3001, "X3", training: true);
+        PosEvent(request, 90);
+
+        Build(request).Should().Be("X3,90,,20260301100000,Marie,cashbox-fr,N,");
+    }
+
+    [Fact]
+    public void TrainingUnspecifiedProtocol_SignsJet920_WithThePosInformation()
+    {
+        var request = Event(0x3000, "X4", training: true);
+        request.ReceiptRequest.ftReceiptCaseData = new Dictionary<string, object> { ["FR"] = new Dictionary<string, object> { ["Information"] = "essai | caisse 2" } };
+
+        Build(request).Should().Be("X4,920,essai / caisse 2,20260301100000,Marie,cashbox-fr,N,");
+    }
+
+    [Fact]
+    public void TrainingUnspecifiedProtocol_WithoutInformation_SignsAnEmptyField()
+        => Build(Event(0x3000, "X4", training: true)).Should().Be("X4,920,,20260301100000,Marie,cashbox-fr,N,");
+
+    [Fact]
+    public void TrainingInternalUsage_SignsJet921_WithTheTotal()
+    {
+        var request = WithCase(0x3003, "X5", training: true);
+        request.ReceiptRequest.cbUser = "Marie";
+
+        Build(request).Should().Be("X5,921,total:1750,20260301100000,Marie,cashbox-fr,N,");
+    }
+
+    [Theory]
+    [InlineData(0x4011)]
+    [InlineData(0x4012)]
+    public void SCUSwitchReceipts_AreNeverSigned(long receiptCase)
+    {
+        var act = () => Build(Event(receiptCase, "E3"));
+
+        act.Should().Throw<FRValidationException>();
     }
 
     [Theory]
@@ -430,14 +571,50 @@ public class InfoCertSignedStringTests
     [InlineData(0x1003, "Invoice")]
     [InlineData(0x3010, "Duplicate")]
     [InlineData(0x2013, "GrandTotals")]
+    [InlineData(0x4002, "GrandTotals")]
     [InlineData(0x3011, "Archive")]
+    [InlineData(0x3000, "Jet")]
     [InlineData(0x3001, "Jet")]
-    [InlineData(0x2000, "DataSet")]
-    [InlineData(0x4002, "DataSet")]
-    [InlineData(0x3002, "DataSet")]
-    [InlineData(0x3000, "DataSet")]
+    [InlineData(0x3002, "Jet")]
+    [InlineData(0x3003, "Jet")]
+    [InlineData(0x2000, "Jet")]
+    [InlineData(0x2001, "Jet")]
+    [InlineData(0x4001, "Jet")]
+    [InlineData(0x4021, "Jet")]
+    [InlineData(0x4022, "Jet")]
     public void KindOf_FollowsTheReceiptCase(long receiptCase, string kind)
         => InfoCertSignedString.KindOf(((ReceiptCase) receiptCase).WithCountry("FR")).ToString().Should().Be(kind);
+
+    /// <summary>
+    /// ADR 0001 and 0021: chain E runs from the queue start through a zero receipt to the queue stop in InfoCert's grammar
+    /// only, each entry signing the previous entry's JWS signature segment.
+    /// </summary>
+    [Fact]
+    public async Task ChainE_FromStartThroughZeroToStop_ChainsInInfoCertGrammar()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        var configuration = Configuration();
+        configuration.PrivateKey = privateKey;
+        using var sut = new InfoCertFRSSCD(configuration);
+
+        var start = Event(0x4001, "E1");
+        StateData(start, new() { ["Version"] = "1.3.80" });
+        var zero = Event(0x2000, "E2");
+        var stop = Event(0x4002, "E3");
+        stop.PeriodTotals = new FRPeriodTotals { Period = FRTotalsPeriod.Year, Current = new FRTotals(), Perpetual = new FRTotals(), Closed = [new FRPeriodTotal { Period = FRTotalsPeriod.Day, Totals = new FRTotals() }] };
+
+        var (startResponse, startSignature) = await sut.ProcessReceiptAsync(start, null);
+        var (zeroResponse, zeroSignature) = await sut.ProcessReceiptAsync(zero, startSignature);
+        var (stopResponse, _) = await sut.ProcessReceiptAsync(stop, zeroSignature);
+
+        Payload(startResponse).Should().Be("E1,260,queue:11111111-1111-1111-1111-111111111111;scu:InfoCert;version:1.3.80,20260301100000,Marie,cashbox-fr,N,");
+        Payload(zeroResponse).Should().Be($"E2,900,,20260301100000,Marie,cashbox-fr,O,{startSignature}");
+        Payload(stopResponse).Should().Be($",0,0,20260301100000,E3:-20260301100000,O,{zeroSignature}");
+    }
+
+    private static string Payload(ProcessResponse response)
+        => Encoding.UTF8.GetString(FRTestData.FromBase64Url(response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data.Split('.')[1]));
 
     [Fact]
     public async Task Scu_SignsTheStringAsTheJwsPayload_AndTheSignatureVerifies()

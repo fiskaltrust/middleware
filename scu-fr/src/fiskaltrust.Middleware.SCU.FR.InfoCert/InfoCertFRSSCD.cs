@@ -15,7 +15,7 @@ using fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 namespace fiskaltrust.Middleware.SCU.FR.InfoCert;
 
 /// <summary>
-/// The Infocert flavour of the NF525 signature. It serializes the receipt into a json data set,
+/// The Infocert flavour of the NF525 signature. It builds the string InfoCert defines for the entry (R13, R12 or R19, ADR 0021),
 /// signs it as an ES256 JWS and returns the JWS signature segment, which the next entry of the
 /// chain carries (ADR 0001). The signature travels as one self-describing token a verifier can
 /// check against the certificate without knowing the middleware.
@@ -74,17 +74,16 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
 
-        // A technical event is an entry of the JET (R19 v4.2): an event without a valid R19 or
-        // editor code and a label cannot be signed as one, so it is refused before it takes a
-        // number of chain L (market-fr#200).
-        if (FRJetEvent.IsJetEvent(receiptRequest) && !FRJetEvent.TryRead(receiptRequest, out _, out var jetError))
+        // An event the POS sends (0x3001, 0x3002) is an entry of the JET (R19 v4.2): an event without a valid code and a
+        // label cannot be signed as one, so it is refused before it takes a number of its chain (market-fr#200, ADR 0021).
+        if (FRJetEvent.CarriesPosEvent(receiptRequest) && !FRJetEvent.TryReadFor(receiptRequest, out _, out var jetError))
         {
             return response.ToSigningFailure($"The technical event cannot enter the NF525 technical event journal: {jetError}", StateFR.Error);
         }
 
-        // market-fr#108, #221: the JWS payload is the string R13/R12/R19 define for this kind of entry (the 25-field data
-        // set on chain E), not a JSON object. The protected header names the certificate serial as kid.
-        var (jws, signature) = _signer.Sign(InfoCertSignedString.Build(request, previousSignature, _configuration), _configuration.CertificateSerialNumber);
+        // market-fr#108, #221: the JWS payload is the string R13/R12/R19 define for this kind of entry, not a JSON object.
+        // The protected header names the certificate serial as kid.
+        var (jws, signature) = _signer.Sign(InfoCertSignedString.Build(request, previousSignature), _configuration.CertificateSerialNumber);
 
         // The QR code is the compact JWS; the certificate serial is its header's kid.
         response.AddReceiptQrCode(jws);

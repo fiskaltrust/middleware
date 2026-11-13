@@ -249,10 +249,10 @@ public class InfoCertFRSSCDTests
 
     /// <summary>
     /// R12/R13 list the seller's identity as data and archive fields, not in the signed strings: a ticket signs none of
-    /// them. Chain E's 25-field data set keeps them at fields 2–5, and field 6 (formerly BT-34) stays empty.
+    /// them, and neither does chain E's R19 JET string (ADR 0021).
     /// </summary>
     [Fact]
-    public async Task IssuerClaims_AreNotInTheR13String_AndStayInTheChainEDataSet()
+    public async Task IssuerClaims_AreInNoSignedString()
     {
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
@@ -272,9 +272,7 @@ public class InfoCertFRSSCDTests
         var (zeroReceipt, _) = await sut.ProcessReceiptAsync(zero, null);
 
         PayloadOf(ticket).Should().NotContain("4711D").And.NotContain(FRTestData.Siret).And.NotContain("123456789");
-        var dataSet = PayloadOf(zeroReceipt).Split('|');
-        dataSet.Should().HaveCount(25);
-        dataSet[..6].Should().Equal(FRTestData.Siret, "RCS Nanterre B 642036065", "4711D", "SAS, au capital de 500000 EUR", "receipts", "");
+        PayloadOf(zeroReceipt).Should().Be("T1,900,,20260301100000,,cashbox-fr,N,");
     }
 
     [Fact]

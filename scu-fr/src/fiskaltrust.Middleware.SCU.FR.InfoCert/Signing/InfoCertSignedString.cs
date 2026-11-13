@@ -8,11 +8,9 @@ using static fiskaltrust.Middleware.SCU.FR.InfoCert.Signing.InfoCertStringFormat
 
 namespace fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 
-/// <summary>The string an entry signs, chosen by its receipt case (market-fr#221, decision on the InfoCert signed content).</summary>
+/// <summary>The string an entry signs, chosen by its receipt case (market-fr#221, ADR 0021).</summary>
 internal enum InfoCertStringKind
 {
-    /// <summary>The 25-field data set of the LNE and self-certified SCUs (archive-v2 §5): chain E.</summary>
-    DataSet,
     /// <summary>R13 v4.2 §7, note and ticket.</summary>
     NoteTicket,
     /// <summary>R13 v4.2 §7, payment proof.</summary>
@@ -25,14 +23,16 @@ internal enum InfoCertStringKind
     GrandTotals,
     /// <summary>R13 v4.2 §7 / R12 v4.2 §7.4, fiscal archive.</summary>
     Archive,
-    /// <summary>R19 v4.2, JET event.</summary>
+    /// <summary>R19 v4.2, JET event: the POS's technical and accounting events, and the entries no other string covers.</summary>
     Jet,
 }
 
 /// <summary>
 /// Builds the "chaîne de caractères avant hash" (R13 <c>ENC-TIK-ARG</c>) the Infocert SCU signs as the payload of its
-/// ES256 JWS: one string per kind of justificatif, as R13 v4.2 §7, R12 v4.2 §7 and R19 v4.2 define them, and the
-/// 25-field data set on chain E (market-fr#108, #221).
+/// ES256 JWS: one string per kind of justificatif, as R13 v4.2 §7, R12 v4.2 §7 and R19 v4.2 define them
+/// (market-fr#108, #221). Every payload is a string InfoCert defines (ADR 0021): the queue stop signs the grand totals,
+/// and the other entries the dictionaries do not cover sign the R19 JET string, with an R19 code or a fiskaltrust code
+/// from 900 up (<see cref="FRJetCodes"/>).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -50,17 +50,11 @@ internal static class InfoCertSignedString
 {
     public const string TrainingMarker = "FORMATION-";
 
-    public static string Build(ProcessRequest request, string? previousSignature, InfoCertConfiguration configuration)
+    public static string Build(ProcessRequest request, string? previousSignature)
     {
         var kind = KindOf(request.ReceiptRequest.ftReceiptCase);
-        // Only a technical event (a non-training 0x3001) is a JET entry; anything else on chain L signs the data set.
-        if (kind == InfoCertStringKind.Jet && !FRJetEvent.IsJetEvent(request.ReceiptRequest))
-        {
-            kind = InfoCertStringKind.DataSet;
-        }
         return kind switch
         {
-            InfoCertStringKind.DataSet => InfoCertDataSetBuilder.Build(request, previousSignature, configuration),
             InfoCertStringKind.NoteTicket => NoteTicket(request.ReceiptRequest, request.ReceiptResponse, previousSignature),
             InfoCertStringKind.PaymentProof => PaymentProof(request.ReceiptRequest, request.ReceiptResponse, previousSignature),
             InfoCertStringKind.Invoice => Invoice(request.ReceiptRequest, request.ReceiptResponse, previousSignature),
@@ -74,9 +68,12 @@ internal static class InfoCertSignedString
 
     /// <summary>
     /// The string of a receipt case (its low word; the training flag does not change it). 0x0007 (Proforma invoice) is on
-    /// chain B and signs R12. Zero, one, lifecycle, SCU-switch and migration receipts, 0x3002 (Protocol (audit/accounting
-    /// event)) and training 0x3000/0x3003 sign the data set.
+    /// chain B and signs R12. 0x4002 (Queue-stop receipt) closes the day, the month and the year, so it signs the grand
+    /// totals like a yearly closing. 0x3000–0x3003 (the protocol cases), 0x2000 (Zero receipt), 0x2001 ((Reserved) One
+    /// receipt), 0x4001 (Queue-start receipt) and 0x4021/0x4022 (Initiate / finish migration) sign the JET string
+    /// (ADR 0021).
     /// </summary>
+    /// <exception cref="FRValidationException">The receipt case is never signed, e.g. 0x4011/0x4012 (Initiate / finish SCU-switch).</exception>
     public static InfoCertStringKind KindOf(ReceiptCase receiptCase) => ((long) receiptCase & 0xFFFF) switch
     {
         0x0000 or 0x0001 or 0x0004 => InfoCertStringKind.NoteTicket,
@@ -84,10 +81,10 @@ internal static class InfoCertSignedString
         0x0002 or 0x3005 => InfoCertStringKind.PaymentProof,
         >= 0x1000 and <= 0x1003 or 0x0007 => InfoCertStringKind.Invoice,
         0x3010 => InfoCertStringKind.Duplicate,
-        >= 0x2010 and <= 0x2013 => InfoCertStringKind.GrandTotals,
+        >= 0x2010 and <= 0x2013 or 0x4002 => InfoCertStringKind.GrandTotals,
         0x3011 => InfoCertStringKind.Archive,
-        0x3001 => InfoCertStringKind.Jet,
-        _ => InfoCertStringKind.DataSet,
+        >= 0x3000 and <= 0x3003 or 0x2000 or 0x2001 or 0x4001 or 0x4021 or 0x4022 => InfoCertStringKind.Jet,
+        var other => throw new FRValidationException($"The InfoCert SCU signs no entry of receipt case 0x{other:X4}."),
     };
 
     /// <summary>
@@ -238,26 +235,92 @@ internal static class InfoCertSignedString
     }
 
     /// <summary>
-    /// R19 JET, 8 fields: id (<c>ftReceiptIdentification</c>), code, contextual information (JET-INF, not the label),
-    /// timestamp, operator, cash-register code (<c>ftCashBoxIdentification</c>), flag, previous signature.
+    /// R19 JET, 8 fields: id (<c>ftReceiptIdentification</c>), code, contextual information (<c>TAG-JET-LIB</c>, not the
+    /// label), timestamp, operator (<c>cbUser</c>), cash-register code (<c>ftCashBoxIdentification</c>), flag, previous
+    /// signature. The code and the contextual information come from <see cref="JetContent"/>.
     /// </summary>
     private static string Jet(ReceiptRequest request, ReceiptResponse response, string? previousSignature)
     {
-        if (!FRJetEvent.TryRead(request, out var jetEvent, out var error))
-        {
-            throw new FRValidationException($"The technical event cannot be signed: {error}");
-        }
+        var (code, information) = JetContent(request, response);
         return Join(
         [
             Text(response.ftReceiptIdentification),
-            jetEvent!.Code.ToString(CultureInfo.InvariantCulture),
-            Text(jetEvent.Information),
+            code.ToString(CultureInfo.InvariantCulture),
+            information,
             Timestamp(response.ftReceiptMoment),
-            Text(jetEvent.Operator),
+            Text(FRRequestValues.Operator(request.cbUser)),
             Text(response.ftCashBoxIdentification),
             .. Chain(previousSignature),
         ]);
     }
+
+    /// <summary>The SCU kind 0x4001 (Queue-start receipt) signs, as the queue tells the SCU kinds apart (R19 code 270).</summary>
+    public const string ScuKind = "InfoCert";
+
+    /// <summary>
+    /// The JET code and contextual information of an entry (ADR 0021, R19 v4.2):
+    /// <list type="bullet">
+    /// <item>0x3001 (Protocol, technical event), 0x3002 (Protocol, audit / accounting event): the event the POS sent, its
+    /// contextual information as text;</item>
+    /// <item>0x4001 (Queue-start receipt): 260, <c>queue:&lt;ftQueueID&gt;;scu:InfoCert;version:&lt;FR version&gt;</c>;</item>
+    /// <item>0x2000 (Zero receipt): 900, <c>request:&lt;flags&gt;</c> when the receipt case carries flags, else empty;</item>
+    /// <item>0x2001 ((Reserved) One receipt): 901, empty;</item>
+    /// <item>0x4021 (Initiate migration): 910, <c>v1:&lt;last v1 queue item&gt;;archive:&lt;v1.2 archive receipt&gt;</c>;</item>
+    /// <item>0x4022 (Finish migration): 911, one record per v1 chain, <c>letter:counter:lastHash:lastSignature</c>;</item>
+    /// <item>training 0x3000 (Protocol, unspecified type): 920, the POS's contextual information if any;</item>
+    /// <item>training 0x3003 (Internal usage / material consumption): 921, <c>total:&lt;amount TTC in cents&gt;</c>.</item>
+    /// </list>
+    /// The records of the contextual information are separated by <c>;</c> and their values by <c>:</c>: <c>,</c> separates
+    /// the fields of the R19 string itself, so the field-20 grammar's <c>,</c> cannot be used inside one of them.
+    /// </summary>
+    /// <exception cref="FRValidationException">The POS's event does not read, or a value holds a separator.</exception>
+    private static (int Code, string Information) JetContent(ReceiptRequest request, ReceiptResponse response)
+    {
+        switch ((long) request.ftReceiptCase & 0xFFFF)
+        {
+            case 0x4001:
+                return (FRJetCodes.QueueStart, Records(
+                    ["queue", response.ftQueueID.ToString("D")],
+                    ["scu", ScuKind],
+                    ["version", FRStateData.Text(response, FRStateData.VersionProperty) ?? ""]));
+            case 0x2000:
+                var flags = (long) request.ftReceiptCase & RequestFlagsMask;
+                return (FRJetCodes.ZeroReceipt, flags == 0 ? "" : Records(["request", flags.ToString("X16", CultureInfo.InvariantCulture)]));
+            case 0x2001:
+                return (FRJetCodes.OneReceipt, "");
+            case 0x4021:
+                return (FRJetCodes.InitiateMigration, Records(
+                    ["v1", FRStateData.Text(response, FRStateData.LastV1QueueItemIdProperty) ?? ""],
+                    ["archive", FRStateData.Text(response, FRStateData.V1ArchiveQueueItemIdProperty) ?? ""]));
+            case 0x4022:
+                return (FRJetCodes.FinishMigration, FRStateData.Migration(response) is { } migration
+                    ? Records(migration.Chains.Select(chain => new[] { chain.Chain, chain.Counter.ToString(CultureInfo.InvariantCulture), chain.LastHash ?? "", chain.LastSignature ?? "" }).ToArray())
+                    : "");
+            case 0x3000:
+                return (FRJetCodes.TrainingUnspecifiedProtocol, Text(FRJetEvent.InformationOf(request)));
+            case 0x3003:
+                return (FRJetCodes.TrainingInternalUsage, Records(["total", Money((request.cbChargeItems ?? new List<ChargeItem>()).Sum(x => x.Amount))]));
+            default:
+                if (!FRJetEvent.TryReadFor(request, out var jetEvent, out var error))
+                {
+                    throw new FRValidationException($"The event cannot be signed: {error}");
+                }
+                return (jetEvent!.Code, Text(jetEvent.Information));
+        }
+    }
+
+    /// <summary>The flag bits of a receipt case: everything between the country/version word and the case word.</summary>
+    private const long RequestFlagsMask = 0x0000_FFFF_FFFF_0000;
+
+    /// <summary>
+    /// Contextual information as records (<c>;</c>) of values (<c>:</c>), refusing a value that holds a separator of the
+    /// record grammar or of the R19 string: it would shift every value or field after it.
+    /// </summary>
+    private static string Records(params string[][] records)
+        => string.Join(";", records.Select(record => string.Join(":", record.Select(value =>
+            value.IndexOfAny([',', '|', ';', ':', '\r', '\n']) >= 0
+                ? throw new FRValidationException($"The value '{value}' cannot be signed in a JET event: it contains ',', '|', ';', ':' or a line break.")
+                : value))));
 
     /// <summary><c>VENTE</c>, <c>ANNULATION</c> (Void 0x0004) or <c>RETOUR</c> (Refund 0x0100).</summary>
     private static string Operation(ReceiptRequest request)
