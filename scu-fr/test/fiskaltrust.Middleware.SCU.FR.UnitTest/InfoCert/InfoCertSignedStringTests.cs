@@ -443,6 +443,21 @@ public class InfoCertSignedStringTests
         Build(request).Should().Be("E1,260,queue:11111111-1111-1111-1111-111111111111;scu:InfoCert;version:1.3.80+g1a2b3c,20260301100000,Marie,cashbox-fr,N,");
     }
 
+    /// <summary>ADR 0021: a training queue start on chain X signs JET 260 too; the queue hands no version over in training.</summary>
+    [Fact]
+    public void TrainingQueueStart_SignsJet260_OnChainX()
+        => Build(Event(0x4001, "X1", training: true)).Should().Be("X1,260,queue:11111111-1111-1111-1111-111111111111;scu:InfoCert;version:,20260301100000,Marie,cashbox-fr,N,");
+
+    /// <summary>ADR 0021: a training queue stop on chain X signs the grand totals exactly like the non-training stop.</summary>
+    [Fact]
+    public void TrainingQueueStop_SignsTheGrandTotals_OnChainX()
+    {
+        var request = Event(0x4002, "X2", training: true);
+        request.PeriodTotals = new FRPeriodTotals { Period = FRTotalsPeriod.Day, Current = new FRTotals { Totalizer = 10.00m, ByRate = new() { ["20"] = 10.00m } }, Perpetual = new FRTotals { Totalizer = 10.00m } };
+
+        Build(request, PreviousSignature).Should().Be($"2000:1000,1000,1000,20260301100000,X2:-20260301100000,O,{PreviousSignature}");
+    }
+
     [Fact]
     public void ZeroReceipt_SignsJet900_WithoutFlagsEmpty()
         => Build(Event(0x2000, "E5"), PreviousSignature).Should().Be($"E5,900,,20260301100000,Marie,cashbox-fr,O,{PreviousSignature}");
