@@ -55,19 +55,9 @@ public class SignatureItemsTests
         }
     }
 
-    /// <summary>The serial, where v1.2 put it: the JWS payload's <c>csn</c>, or the data set's fourth-from-last field.</summary>
+    /// <summary>The serial: the JWS header's <c>kid</c> (InfoCert, market-fr#221), or the data set's fourth-from-last field (LNE).</summary>
     private static string? CertificateSerialOf(string qrCode)
-    {
-        var signedContent = FRReceiptQrCode.SignedContentOf(qrCode);
-        if (signedContent.Contains('|'))
-        {
-            return signedContent.Split('|')[^4];
-        }
-        var payload = signedContent.Split('.')[1].Replace('-', '+').Replace('_', '/');
-        payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
-        using var json = JsonDocument.Parse(Convert.FromBase64String(payload));
-        return json.RootElement.GetProperty("csn").GetString();
-    }
+        => FRJws.IsJws(qrCode) ? FRJws.Decode(qrCode).KeyId : FRReceiptQrCode.SignedContentOf(qrCode).Split('|')[^4];
 
     private void Print(string scuName, ReceiptResponse response)
     {
@@ -95,6 +85,7 @@ public class SignatureItemsTests
     {
         ftCashBoxID = cashBoxId,
         cbTerminalID = "1",
+        cbUser = "operator-1",
         cbReceiptReference = Guid.NewGuid().ToString("N")[..8],
         cbReceiptMoment = DateTime.UtcNow,
         Currency = Currency.EUR,

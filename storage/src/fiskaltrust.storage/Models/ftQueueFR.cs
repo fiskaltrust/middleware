@@ -881,6 +881,17 @@ namespace fiskaltrust.storage.V0
         /// </summary>
         public string YLastSignature { get; set; }
 
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of archive receipts
+        /// </summary>
+        public string ALastSignature { get; set; }
+
+        /// <summary>
+        /// QueueFR v2 state that has no v1 column (JSON): the archive file still open, from which ArchiveIsDue and
+        /// the forced archive at the one-year limit are decided (market-fr ADR 0018), and when a v1 queue was migrated
+        /// </summary>
+        public string StateV2 { get; set; }
+
         #endregion
 
         #region Late Signing

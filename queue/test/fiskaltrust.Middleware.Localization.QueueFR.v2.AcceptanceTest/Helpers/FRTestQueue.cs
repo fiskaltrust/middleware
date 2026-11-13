@@ -11,13 +11,15 @@ public static class FRTestQueue
 {
     public const string CashBoxIdentification = "cashbox-fr";
 
-    public static (Func<string, Task<string>> SignProcessor, Guid CashBoxId) Create(IFRSSCD scu)
+    /// <param name="overrides">Configuration keys set on top of the test queue's, e.g. to leave the local-development marker out.</param>
+    public static (Func<string, Task<string>> SignProcessor, Guid CashBoxId) Create(IFRSSCD scu, Dictionary<string, object>? overrides = null)
     {
         var queueId = Guid.NewGuid();
         var cashBoxId = Guid.NewGuid();
 
         var configuration = new Dictionary<string, object>
         {
+            { "FRLocalDevelopment", true },
             { "cashboxid", cashBoxId },
             { "init_ftCashBox", JsonSerializer.Serialize(new ftCashBox { ftCashBoxId = cashBoxId, TimeStamp = DateTime.UtcNow.Ticks }) },
             { "init_ftQueue", JsonSerializer.Serialize(new List<ftQueue>
@@ -45,6 +47,11 @@ public static class FRTestQueue
                 })
             },
         };
+
+        foreach (var (key, value) in overrides ?? [])
+        {
+            configuration[key] = value;
+        }
 
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var storageProvider = new InMemoryLocalizationStorageProvider(queueId, configuration, loggerFactory);

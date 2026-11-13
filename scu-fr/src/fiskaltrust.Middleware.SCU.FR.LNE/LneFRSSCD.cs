@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.LNE.Models;
@@ -12,7 +13,7 @@ namespace fiskaltrust.Middleware.SCU.FR.LNE;
 /// <summary>
 /// The LNE flavour of the NF525 signature. It builds the ordered "jeu de données à signer",
 /// signs it with SHA-256withECDSA and chains on the previous signature (ADR 0001). The signed data set is
-/// attached to the response as its own signature item, because an LNE audit reconstructs the
+/// returned in the receipt's QR code item, followed by its signature, because an LNE audit reconstructs the
 /// signed string from the archive and re-verifies it field by field.
 /// </summary>
 /// <remarks>
@@ -26,6 +27,9 @@ public class LneFRSSCD : IFRSSCD, IDisposable
 
     /// <summary>The certification mention LNE Rev. 1.8 Exigence 9 recommends on every ticket.</summary>
     public const string Mention = "Système de caisse certifié LNE";
+
+    /// <summary>The line a sandbox prints instead: a sandbox SCU is not certified (market-fr#221, 2026-11-07).</summary>
+    public const string SandboxMention = FRSandbox.PendingCertification + " LNE";
 
     private readonly LneConfiguration _configuration;
     private readonly LneSignatureCreator _signatureCreator;
@@ -46,6 +50,10 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         LneCertificateNumber = _configuration.LneCertificateNumber,
         SoftwareName = _configuration.SoftwareName,
         SoftwareVersion = _configuration.SoftwareVersion,
+        Rcs = _configuration.Rcs,
+        Naf = _configuration.Naf,
+        LegalForm = _configuration.LegalForm,
+        VatOption = _configuration.VatOption,
         SignatureCreationDataAvailable = true,
     }.ToFRSSCDInfo());
 
@@ -54,6 +62,11 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         try
         {
             return Task.FromResult(SignReceipt(request, previousSignature));
+        }
+        catch (FRValidationException ex)
+        {
+            // A value the data set cannot hold: this receipt is refused, the SCU is not unavailable.
+            return Task.FromResult(request.ReceiptResponse.ToSigningFailure($"The LNE SCU refuses receipt {request.ReceiptRequest?.cbReceiptReference}: {ex.Message}", StateFR.Error));
         }
         catch (Exception ex)
         {
@@ -76,7 +89,15 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         // market-fr#131: the mention LNE Rev. 1.8 Exigence 9 recommends, with the LNE certificate
         // number (an acceptable solution of the same exigence). Printed on every ticket, so it stays
         // short: the full signature the exigence recommends is in the QR code. Not signed.
-        response.AddSignatureItem(SignatureTypeFR.CertificationBody, Mention, _configuration.LneCertificateNumber);
+        // A sandbox is not certified (LNE Rev. 1.8 §III.10): it claims no certification and prints no number.
+        if (_configuration.Sandbox)
+        {
+            response.AddSignatureItem(SignatureTypeFR.CertificationBody, SandboxMention, "");
+        }
+        else
+        {
+            response.AddSignatureItem(SignatureTypeFR.CertificationBody, Mention, _configuration.LneCertificateNumber);
+        }
         response.AddPeriodTotalsItems(request.PeriodTotals);
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);

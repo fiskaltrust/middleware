@@ -29,11 +29,12 @@ internal static class InfoCertVatSummary
             return null;
         }
 
+        // Grouped by the key itself: two rates that differ past its precision make one line, not a duplicate key.
         return chargeItems
-            .GroupBy(x => x.VATRate)
-            .OrderByDescending(x => x.Key)
+            .GroupBy(x => RateKey(x.VATRate))
+            .OrderByDescending(x => x.Max(item => item.VATRate))
             .ToDictionary(
-                x => RateKey(x.Key),
+                x => x.Key,
                 x =>
                 {
                     var ttc = x.Sum(item => item.Amount);

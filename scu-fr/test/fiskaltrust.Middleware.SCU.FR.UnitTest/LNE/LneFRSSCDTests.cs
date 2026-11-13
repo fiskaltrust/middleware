@@ -230,8 +230,11 @@ public class LneFRSSCDTests
 
         var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
-        // market-fr#141: fixed positions right after the SIRET.
-        DataSetOf(response).Split('|')[..6].Should().Equal(FRTestData.Siret, "RCS Nanterre B 642036065", "4711D", "SAS, au capital de 500000 EUR", "debits", "123456789_POS");
+        // market-fr#141: fixed positions right after the SIRET. Field 6, formerly the electronic address
+        // BT-34, stays reserved and empty even when configured (market-fr#221).
+        var fields = DataSetOf(response).Split('|');
+        fields.Should().HaveCount(25);
+        fields[..6].Should().Equal(FRTestData.Siret, "RCS Nanterre B 642036065", "4711D", "SAS, au capital de 500000 EUR", "debits", "");
     }
 
     [Fact]
@@ -264,6 +267,31 @@ public class LneFRSSCDTests
     }
 
     [Fact]
+    public async Task CertificationMention_InASandbox_ClaimsNoCertification()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        var configuration = Configuration(privateKey);
+        configuration.Sandbox = true;
+        using var sut = new LneFRSSCD(configuration);
+
+        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        var item = response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody));
+        item.Caption.Should().Be("en cours de certif. LNE");
+        item.Data.Should().BeEmpty();
+        response.ReceiptResponse.ftSignatures.Should().NotContain(x => (x.Caption ?? "").Contains("certifié") || (x.Data ?? "").Contains("certifié"));
+    }
+
+    [Fact]
+    public void FromConfiguration_ReadsTheLauncherSandboxKey()
+    {
+        var configuration = new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["CertificateSerialNumber"] = "CERT-4711", ["LneCertificateNumber"] = "LNE-1", ["Sandbox"] = "true" };
+
+        LneConfiguration.FromConfiguration(configuration).Sandbox.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task RequestHash_IsTheCanonicalRequestHashAfterTheQueueItemId()
     {
         var (privateKey, key) = FRTestData.CreateKey();
@@ -293,6 +321,27 @@ public class LneFRSSCDTests
         DataSetOf(ticket).Split('|')[13].Should().BeEmpty("only a copy has a reprint number");
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ArchiveBoundaries_AreSignedBeforeThePeriodTotals(bool asJson)
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+
+        var (archive, _) = await sut.ProcessReceiptAsync(FRTestData.Archive(asJson), null);
+        var (ticket, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        // ... payment breakdown, archive boundaries, period totals, certificate serial, counter, flag, previous signature.
+        var boundaries = DataSetOf(archive).Split('|')[^6].Split(',');
+        boundaries[0].Should().Be(FRTestData.PreviousArchive.ToString("D"));
+        boundaries[2].Should().Be("2026-01-01T08:00:00.0000000Z");
+        boundaries[8].Should().Be("12.50", "the day totalizer follows the eight boundary fields");
+        boundaries.Should().HaveCount(8 + 3 * 11);
+        DataSetOf(ticket).Split('|')[^6].Should().BeEmpty("only an archive receipt has boundaries");
+    }
+
     [Fact]
     public async Task SalesLineCount_IsSignedAfterTheCopyNumber_InA24FieldDataSet()
     {
@@ -313,7 +362,7 @@ public class LneFRSSCDTests
         // ... receipt case, copy number, then the sales-line count (market-fr#148); the discount is not a line.
         var fields = DataSetOf(response).Split('|');
         fields[14].Should().Be("2");
-        fields.Should().HaveCount(24, "the frozen LNE field order (2026-11-04)");
+        fields.Should().HaveCount(25, "the LNE field order frozen on 2026-11-04, plus the archive boundaries (market-fr#221)");
     }
 
     [Fact]
@@ -333,7 +382,7 @@ public class LneFRSSCDTests
     [Fact]
     public void FromConfiguration_WithAnUnknownVatOption_IsRejected()
     {
-        var act = () => LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["VatOption"] = "monthly" });
+        var act = () => LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["CertificateSerialNumber"] = "CERT-4711", ["LneCertificateNumber"] = "LNE-1", ["VatOption"] = "monthly" });
 
         act.Should().Throw<FRValidationException>().WithMessage("*VatOption*");
     }
@@ -341,7 +390,7 @@ public class LneFRSSCDTests
     [Fact]
     public void FromConfiguration_WithTheFieldSeparatorInAClaim_IsRejected()
     {
-        var act = () => LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["LegalForm"] = "SAS|SARL" });
+        var act = () => LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["CertificateSerialNumber"] = "CERT-4711", ["LneCertificateNumber"] = "LNE-1", ["LegalForm"] = "SAS|SARL" });
 
         act.Should().Throw<FRValidationException>().WithMessage("*LegalForm*|*");
     }
@@ -349,7 +398,7 @@ public class LneFRSSCDTests
     [Fact]
     public void FromConfiguration_ReadsTheIssuerClaims()
     {
-        var configuration = LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["rcs"] = "RCS Paris B 1", ["VatOption"] = "receipts" });
+        var configuration = LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["CertificateSerialNumber"] = "CERT-4711", ["LneCertificateNumber"] = "LNE-1", ["rcs"] = "RCS Paris B 1", ["VatOption"] = "receipts" });
 
         configuration.Rcs.Should().Be("RCS Paris B 1");
         configuration.VatOption.Should().Be("receipts");

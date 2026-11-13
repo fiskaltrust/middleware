@@ -119,14 +119,15 @@ public class TypeOfServiceTests
     }
 
     [Fact]
-    public async Task ReceiptWithoutGoodsOrServices_LeavesTheStateDataUntouched()
+    public async Task ReceiptWithoutGoodsOrServices_HasNoTypeOfService()
     {
         var (pipeline, _) = CreatePipeline();
         var request = new ProcessCommandRequest(new ftQueue { ftQueueId = Guid.NewGuid() }, Request(Item(ChargeItemCaseTypeOfService.Voucher)), Response());
 
         var response = await pipeline.SignAsync(request);
 
-        response.receiptResponse.ftStateData.Should().BeNull();
+        // The state data still carries the values the archive reads (totals, line values; market-fr#221).
+        MiddlewareStateData.FromReceiptResponse(response.receiptResponse).FR!.ftTypeOfService.Should().BeNull();
     }
 
     [Fact]

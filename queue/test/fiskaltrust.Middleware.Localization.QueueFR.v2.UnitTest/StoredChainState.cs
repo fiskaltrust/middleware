@@ -12,10 +12,8 @@ internal sealed class StoredChainState
     public StoredChainState(ftQueueFR? stored = null)
     {
         QueueId = stored?.ftQueueFRId ?? Guid.NewGuid();
-        if (stored is not null)
-        {
-            Repository.InsertOrUpdateQueueFRAsync(stored).GetAwaiter().GetResult();
-        }
+        // A French queue always has its ftQueueFR row (its configuration); the provider refuses to start without one.
+        Repository.InsertOrUpdateQueueFRAsync(stored ?? new ftQueueFR { ftQueueFRId = QueueId }).GetAwaiter().GetResult();
     }
 
     public Guid QueueId { get; }

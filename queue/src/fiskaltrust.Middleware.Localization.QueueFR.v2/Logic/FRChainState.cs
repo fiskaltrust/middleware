@@ -1,6 +1,8 @@
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Base.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
@@ -71,6 +73,10 @@ public class FRChainStateProvider
     // next signature, which would otherwise be lost on a restart.
     private bool _unstored;
 
+    // ftQueueFR may lag behind the stored queue items: at start-up (a process stopped between the two
+    // writes) and after a store whose outcome is unknown. Checked before the next request is numbered.
+    private bool _reconcileDue = true;
+
     public FRChainStateProvider(AsyncLazy<IConfigurationRepository> configurationRepository, Guid queueId)
     {
         _configurationRepository = configurationRepository;
@@ -88,7 +94,7 @@ public class FRChainStateProvider
     /// The state of an earlier stored receipt still cannot be written to ftQueueFR; nothing is
     /// signed until it is.
     /// </exception>
-    public async Task<T> ExecuteInChainAsync<T>(ReceiptRequest request, Func<FRChainState, FRPeriodTotalsAccumulator, FRLateSigningState, Task<T>> operation)
+    public async Task<T> ExecuteInChainAsync<T>(ReceiptRequest request, Func<FRChainState, FRPeriodTotalsAccumulator, FRLateSigningState, FRPendingMessagesState, FROpenArchiveFile, FRClosingDue, Task<T>> operation)
     {
         await _lock.WaitAsync().ConfigureAwait(false);
         try
@@ -106,14 +112,14 @@ public class FRChainStateProvider
                 }
             }
 
-            _queueFR ??= await repository.GetQueueFRAsync(_queueId).ConfigureAwait(false) ?? new ftQueueFR { ftQueueFRId = _queueId };
+            _queueFR ??= await LoadAsync(repository).ConfigureAwait(false);
 
             var state = new FRChainState(request.ResolveChain(), _queueFR);
             var numeratorBefore = state.Numerator;
             T result;
             try
             {
-                result = await operation(state, new FRPeriodTotalsAccumulator(_queueFR), new FRLateSigningState(_queueFR)).ConfigureAwait(false);
+                result = await operation(state, new FRPeriodTotalsAccumulator(_queueFR), new FRLateSigningState(_queueFR), new FRPendingMessagesState(_queueFR), new FROpenArchiveFile(_queueFR), new FRClosingDue(_queueFR)).ConfigureAwait(false);
             }
             catch
             {
@@ -131,6 +137,49 @@ public class FRChainStateProvider
             }
 
             return result;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Reads the chain state as the next signed receipt finds it, e.g. the previous archive receipt and
+    /// the period totals an archive receipt signs (market-fr#221). Nothing it reads may be changed.
+    /// </summary>
+    public async Task<T> ReadAsync<T>(Func<ftQueueFR, T> read)
+    {
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var repository = await _configurationRepository;
+            _queueFR ??= await LoadAsync(repository).ConfigureAwait(false);
+            return read(_queueFR);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Changes the state a signature just advanced, together with it: the change is stored when the
+    /// signed queue item is, and dropped with it otherwise (e.g. the v1 handover of a finish-migration
+    /// receipt, market-fr ADR 0003).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">No signature advanced the state.</exception>
+    public async Task ApplyToSignedStateAsync(Action<ftQueueFR> change)
+    {
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (!_pending || _queueFR is null)
+            {
+                throw new InvalidOperationException("Only the state a signature advanced can be changed with it.");
+            }
+
+            change(_queueFR);
         }
         finally
         {
@@ -180,6 +229,215 @@ public class FRChainStateProvider
         finally
         {
             _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Drops the in-memory state because it is unknown whether the signed queue item was stored. The
+    /// stored state is read again and rolled forward over the stored items before the next request
+    /// (<see cref="ReconcileAsync"/>), so a stored entry is never numbered again.
+    /// </summary>
+    public void DiscardAndReconcile()
+    {
+        _lock.Wait();
+        try
+        {
+            _queueFR = null;
+            _pending = false;
+            _reconcileDue = true;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Rolls ftQueueFR forward over the signed entries stored after the state it holds:
+    /// walks back from the last stored queue item to the first one the state
+    /// already covers, replays the newer ones in order (<see cref="FRChainRepair"/>), runs the
+    /// lifecycle step of a replayed opening or closing receipt, and stores the result. Runs once at
+    /// start-up and again after a store whose outcome was unknown; returns the number of entries replayed.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">ftQueueFR is missing, or the repaired state cannot be stored.</exception>
+    public async Task<int> ReconcileAsync(IMiddlewareQueueItemRepository queueItems, Func<ReceiptCase, Task> lifecycle, IMiddlewareActionJournalRepository? actionJournals = null)
+    {
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (!_reconcileDue)
+            {
+                return 0;
+            }
+
+            var repository = await _configurationRepository;
+            if (_unstored)
+            {
+                await StoreAsync(repository).ConfigureAwait(false);
+            }
+
+            _queueFR ??= await LoadAsync(repository).ConfigureAwait(false);
+
+            var ahead = new List<FRChainRepair.SignedEntry>();
+            var last = await queueItems.GetLastQueueItemAsync().ConfigureAwait(false);
+            for (var row = last?.ftQueueRow ?? 0; row > 0; row--)
+            {
+                var item = row == last!.ftQueueRow ? last : await queueItems.GetByQueueRowAsync(row).ConfigureAwait(false);
+                if (item is null)
+                {
+                    continue;
+                }
+
+                var (kind, entry) = FRChainRepair.Read(item);
+                if (kind == FRChainRepair.Kind.V1)
+                {
+                    break;
+                }
+
+                if (entry is null)
+                {
+                    continue;
+                }
+
+                if (entry.Number <= _queueFR.GetNumerator(entry.Chain))
+                {
+                    break;
+                }
+
+                ahead.Add(entry);
+            }
+
+            ahead.Reverse();
+            foreach (var entry in ahead)
+            {
+                var integrityDefects = actionJournals is null ? null : new List<ftActionJournal>();
+                List<FROpenArchiveFile.ForcedFile> files;
+                try
+                {
+                    files = FRChainRepair.Apply(_queueFR, entry, integrityDefects);
+                }
+                catch
+                {
+                    // The entry cannot be rolled over: drop what was applied so far, and reconcile again next time.
+                    _queueFR = null;
+                    throw;
+                }
+                foreach (var defect in integrityDefects ?? [])
+                {
+                    await actionJournals!.InsertAsync(defect).ConfigureAwait(false);
+                }
+                foreach (var file in files)
+                {
+                    await RecordForcedArchiveAsync(entry, file, actionJournals).ConfigureAwait(false);
+                }
+                if (!entry.Request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
+                {
+                    await lifecycle(entry.Request.ftReceiptCase.Case()).ConfigureAwait(false);
+                }
+            }
+
+            if (ahead.Count > 0)
+            {
+                try
+                {
+                    await StoreAsync(repository).ConfigureAwait(false);
+                }
+                catch
+                {
+                    _queueFR = null;
+                    throw;
+                }
+            }
+
+            _reconcileDue = false;
+            return ahead.Count;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// The journal entries of a forced file met while rolling forward (ADR 0018). The limit and the
+    /// closing rule are deterministic over the stored entries, so the file is the one the lost store
+    /// recorded. An entry stored with the receipt is kept and never written twice; the pending count is
+    /// replayed either way, since ftQueueFR is what lagged.
+    /// </summary>
+    private async Task RecordForcedArchiveAsync(FRChainRepair.SignedEntry entry, FROpenArchiveFile.ForcedFile file, IMiddlewareActionJournalRepository? actionJournals)
+    {
+        if (actionJournals is null)
+        {
+            return;
+        }
+
+        var stored = await actionJournals.GetByQueueItemId(entry.Response.ftQueueItemID).ToListAsync().ConfigureAwait(false);
+        var forced = stored.FirstOrDefault(x => FRArchiveDue.IsForcedArchiveOf(x, file));
+        if (forced is null)
+        {
+            forced = Factories.ftActionJournalFactory.CreateForcedArchiveActionJournal(entry.Request, entry.Response, file);
+            await actionJournals.InsertAsync(forced).ConfigureAwait(false);
+        }
+
+        var pending = FRArchiveDue.PendingJet30(new FRPendingMessagesState(_queueFR!), entry.Response, file, forced.ftActionJournalId);
+        if (!stored.Any(x => FRArchiveDue.IsPendingJet30Of(x, file)))
+        {
+            await actionJournals.InsertAsync(pending).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// The queue's ftQueueFR row. A missing row is a configuration error (the queue's
+    /// <c>init_ftQueueFR</c>), never a blank row: a blank one would be stored over the configuration
+    /// by the next commit, without SIRET or SCU.
+    /// </summary>
+    private async Task<ftQueueFR> LoadAsync(IConfigurationRepository repository)
+        => await repository.GetQueueFRAsync(_queueId).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"The French queue {_queueId} has no ftQueueFR row. It is part of the queue's configuration (init_ftQueueFR); nothing is signed until it exists.");
+
+    /// <summary>
+    /// Records a JET event found outside a request (a local archive export's integrity check, a
+    /// rollback) as a pending message: the action journal entry is stored first, then the count in
+    /// ftQueueFR (<see cref="FRPendingMessagesState"/>). Runs between requests, so no signed but
+    /// unstored chain state is written with it.
+    /// </summary>
+    public async Task<ftActionJournal> RaisePendingJetEventAsync(IMiddlewareActionJournalRepository actionJournals, int code, string label, string? information)
+    {
+        await _requestLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await _lock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                var repository = await _configurationRepository;
+                if (_pending || _unstored)
+                {
+                    throw new InvalidOperationException("The French chain state of the last signed receipt is not stored yet; the pending JET event is raised once it is.");
+                }
+
+                _queueFR ??= await LoadAsync(repository).ConfigureAwait(false);
+                var journal = new FRPendingMessagesState(_queueFR).Raise(_queueId, code, label, information, DateTime.UtcNow);
+                try
+                {
+                    await actionJournals.InsertAsync(journal).ConfigureAwait(false);
+                    await StoreAsync(repository).ConfigureAwait(false);
+                }
+                catch
+                {
+                    _queueFR = null;
+                    throw;
+                }
+
+                return journal;
+            }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+        finally
+        {
+            _requestLock.Release();
         }
     }
 

@@ -2,77 +2,113 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Text.Json;
 
 namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 {
     /// <summary>
     /// One signed entry of a QueueFR v2 chain, read from the stored queue item: what the POS sent, what
-    /// the queue answered, and the request hash the queue stored with it. It is built from the raw
-    /// <c>ftQueueItem</c> fields only, so the middleware and datapipes feed the same columns (ADR 0008)
-    /// without this package referencing either one's storage.
+    /// the queue answered, and what the SCU signed. It is built from the raw <c>ftQueueItem</c> fields
+    /// only, so the middleware and datapipes feed the same columns (ADR 0008) without this package
+    /// referencing either one's storage.
     /// </summary>
+    /// <remarks>
+    /// The chain links (<see cref="StartOfChain"/>, <see cref="PreviousSignature"/>), <see cref="Siret"/>
+    /// and <see cref="RequestHash"/> are read from the signed content of the receipt signature, never
+    /// derived from the entries around it (archive-v2 §1.1, ADR 0001, ADR 0012), so an entry reads the
+    /// same whatever else the export holds. An entry read through an <see cref="ArchiveEntrySpool"/>
+    /// keeps its request and response on disk and loads them when a column needs them.
+    /// </remarks>
     public sealed class ArchiveEntry
     {
         private const long CountryMask = unchecked((long) 0xFFFF_0000_0000_0000);
         private const long CountryFR = 0x4652_0000_0000_0000;
         private const long ReceiptSignatureType = 0x0001;
         private const long SiretType = 0x0009;
-
-        // FRCanonicalRequest.SignedField: the canonical-form version, a colon, the padded Base64 SHA-256 (ADR 0013).
-        private static readonly Regex SignedRequestHashField = new Regex("^[0-9]+:[A-Za-z0-9+/]{43}=$", RegexOptions.CultureInvariant);
+        private const long IssuerType = 0x0013;
         private const long TrainingFlag = 0x0000_0000_0002_0000;
 
-        private ArchiveEntry(Guid queueItemId, Guid queueId, long queueRow, string rawRequest, JsonElement request, JsonElement response,
-            string chain, long chainCounter, string signature)
+        private readonly ArchiveEntryContent? _content;
+        private readonly ArchiveEntrySpool? _spool;
+        private readonly long _spoolOffset;
+
+        private ArchiveEntry(Guid queueItemId, Guid queueId, long queueRow, string? processingVersion, ArchiveEntryContent content,
+            string chain, long chainCounter, string receiptIdentification, DateTime receiptMoment)
         {
-            RawRequest = rawRequest;
             QueueItemId = queueItemId;
             QueueId = queueId;
             QueueRow = queueRow;
-            RequestHash = SignedRequestHash(signature);
-            Request = request;
-            Response = response;
+            ProcessingVersion = string.IsNullOrEmpty(processingVersion) ? null : processingVersion;
+            _content = content;
             Chain = chain;
             ChainCounter = chainCounter;
-            Signature = signature;
-            ReceiptIdentification = String(response, "ftReceiptIdentification")!;
-            ReceiptMoment = Moment(response, "ftReceiptMoment") ?? DateTime.MinValue;
-            ReceiptCase = Long(request, "ftReceiptCase") ?? 0;
-            State = Long(response, "ftState") ?? 0;
-            CertificateSerialNumber = SignedCertificateSerialNumber(signature);
-            Siret = SignatureData(response, SiretType);
+            ReceiptIdentification = receiptIdentification;
+            ReceiptMoment = receiptMoment;
+            ReceiptCase = Long(content.Request, "ftReceiptCase") ?? 0;
+            State = Long(content.Response, "ftState") ?? 0;
+            StartOfChain = content.Links.StartOfChain;
+            CertificateSerialNumber = content.Links.CertificateSerialNumber;
+            Siret = content.Links.Siret ?? SignatureData(content.Response, SiretType);
+        }
+
+        private ArchiveEntry(ArchiveEntry entry, ArchiveEntrySpool spool, long spoolOffset, Func<string?, string?> intern)
+        {
+            QueueItemId = entry.QueueItemId;
+            QueueId = entry.QueueId;
+            QueueRow = entry.QueueRow;
+            ProcessingVersion = intern(entry.ProcessingVersion);
+            _spool = spool;
+            _spoolOffset = spoolOffset;
+            Chain = intern(entry.Chain)!;
+            ChainCounter = entry.ChainCounter;
+            ReceiptIdentification = entry.ReceiptIdentification;
+            ReceiptMoment = entry.ReceiptMoment;
+            ReceiptCase = entry.ReceiptCase;
+            State = entry.State;
+            StartOfChain = entry.StartOfChain;
+            CertificateSerialNumber = intern(entry.CertificateSerialNumber);
+            Siret = intern(entry.Siret);
         }
 
         public Guid QueueItemId { get; }
+
+        /// <summary>
+        /// The version of the middleware that processed the entry, as stored on the queue item
+        /// (<c>ftQueueItem.ProcessingVersion</c>, the informational version with build and commit; market-fr#124).
+        /// </summary>
+        public string? ProcessingVersion { get; }
+
+        /// <summary>The <c>FR</c> block of the response's <c>ftStateData</c>, where the queue stores totals and line values.</summary>
+        public JsonElement? StateFR => Content.StateFR;
 
         public Guid QueueId { get; }
 
         public long QueueRow { get; }
 
         /// <summary>
-        /// The canonical request value the SCU signed, <c>1:&lt;Base64 SHA-256&gt;</c> (ADR 0013), read from
-        /// the signed data set the response carries; never recomputed here. Null when the SCU signs none
-        /// (InfoCert). A verifier recomputes it from <see cref="RawRequest"/> and compares.
+        /// The canonical request value the SCU signed, <c>1:&lt;Base64 SHA-256&gt;</c> (ADR 0013): the field
+        /// right after <c>ftQueueItemID</c> of the LNE and self-certified data set (field 9); never recomputed
+        /// here. Null when the SCU signs none (InfoCert, the in-memory SCU). A verifier recomputes it from
+        /// <see cref="RawRequest"/> and compares.
         /// </summary>
-        public string? RequestHash { get; }
+        public string? RequestHash => Content.Links.RequestHash;
 
         /// <summary>The ReceiptRequest as the queue stored it.</summary>
-        public JsonElement Request { get; }
+        public JsonElement Request => Content.Request;
 
         /// <summary>
         /// <c>ftQueueItem.request</c> exactly as stored, never re-serialized: the LNE request hash (ADR 0013)
         /// is recomputed from it (archive-v2 §9).
         /// </summary>
-        public string RawRequest { get; }
+        public string RawRequest => Content.RawRequest;
 
         /// <summary>The ReceiptResponse as the queue stored it.</summary>
-        public JsonElement Response { get; }
+        public JsonElement Response => Content.Response;
 
         /// <summary>The chain letter, as the queue wrote it into <c>ftReceiptIdentification</c>.</summary>
         public string Chain { get; }
 
+        /// <summary>The entry's position in its chain: the counter of <c>ftReceiptIdentification</c>, equal to the signed one.</summary>
         public long ChainCounter { get; }
 
         public string ReceiptIdentification { get; }
@@ -85,56 +121,105 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         public bool Training => (ReceiptCase & TrainingFlag) != 0;
 
-        /// <summary>The <c>Data</c> of the receipt signature item: a compact JWS (InfoCert) or a bare Base64Url signature (LNE).</summary>
-        public string Signature { get; }
+        /// <summary>The <c>Data</c> of the receipt signature item: a compact JWS (InfoCert) or <c>&lt;data set&gt;.&lt;signature&gt;</c> (LNE).</summary>
+        public string Signature => Content.Signature;
 
         /// <summary>The part of <see cref="Signature"/> the next entry of the chain covers (ADR 0001).</summary>
         public string ChainedSignature => Signature.Substring(Signature.LastIndexOf('.') + 1);
 
+        /// <summary>
+        /// The signing certificate's serial number, as signed: the JWS header's <c>kid</c> (market-fr#221), else a JSON JWS
+        /// payload's <c>csn</c> (InfoCert entries signed before), or the data set's fourth-from-last field.
+        /// </summary>
         public string? CertificateSerialNumber { get; }
 
+        /// <summary>
+        /// The SIRET the SCU signed: the data set's first field, the JWS payload's <c>siret</c>. An InfoCert JET
+        /// payload and an R13/R12/R19 string sign none (market-fr#221); their SIRET is the one the SCU printed (the <c>Siret</c> item, 0x0009).
+        /// </summary>
         public string? Siret { get; }
 
         /// <summary>
-        /// The chained signature of the previous entry of the same chain; null on the start of the chain, and
-        /// when that entry is not known (see <see cref="ArchiveChainLinker"/>).
+        /// The signed previous signature of the same chain, verbatim (ADR 0001); null exactly when
+        /// <see cref="StartOfChain"/>. The first v2 entry of a chain continued from v1.2 carries the v1.2
+        /// signature it was chained on (ADR 0003).
         /// </summary>
-        public string? PreviousSignature { get; internal set; }
+        public string? PreviousSignature => Content.Links.PreviousSignature;
 
-        /// <summary>True on the first entry of a chain, which carries no previous signature (ADR 0001).</summary>
-        public bool StartOfChain { get; internal set; }
+        /// <summary>
+        /// A value of the issuer item the SCU printed (signature type 0x0013, market-fr#221): its <c>Label : value</c> line
+        /// for <paramref name="label"/>, e.g. <c>Capital social</c>; null when the entry has no such item or line. Not signed.
+        /// </summary>
+        public string? IssuerValue(string label)
+        {
+            foreach (var line in (SignatureData(Content.Response, IssuerType) ?? "").Split('\n'))
+            {
+                var at = line.IndexOf(" : ", StringComparison.Ordinal);
+                if (at > 0 && line.Substring(0, at) == label)
+                {
+                    var value = line.Substring(at + 3);
+                    return value.Length == 0 ? null : value;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>The issuer claims the SCU signed (archive-v2 §1.1), read from the signed content.</summary>
+        public IssuerClaims Issuer => Content.Links.Issuer;
+
+        /// <summary>
+        /// On a closing (0x2010–0x2013) or the queue stop (0x4002): the start of the period the receipt closes, as the
+        /// LNE or self-certified data set signs it in field 20 (archive-v2 §5, market-fr#221). Field 20 lists every
+        /// closed period shortest first, <c>period,start</c>; the receipt's own period is the last. Null when nothing
+        /// is signed there (InfoCert, a receipt signed before market-fr#221 signed the period) or it does not read.
+        /// </summary>
+        public DateTime? SignedPeriodStart
+        {
+            get
+            {
+                var receiptCase = ReceiptCase & 0xFFFF;
+                if (!(receiptCase >= 0x2010 && receiptCase <= 0x2013 || receiptCase == 0x4002) || Content.Links.Field20 is not { } field)
+                {
+                    return null;
+                }
+                var values = field.Split(';').Last().Split(',');
+                return values.Length == 2 && DateTime.TryParse(values[1], CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var start)
+                    ? start.ToUniversalTime()
+                    : (DateTime?) null;
+            }
+        }
+
+        /// <summary>True when the InfoCert SCU signed the entry: its signed content is a JWS, not a data set.</summary>
+        public bool SignedByInfoCert => Content.Links.Jws;
+
+        /// <summary>True on the first entry of a chain, which carries no previous signature: the signed flag <c>N</c> (ADR 0001).</summary>
+        public bool StartOfChain { get; }
+
+        private ArchiveEntryContent Content => _content ?? _spool!.Load(_spoolOffset);
+
+        /// <summary>This entry, its request and response kept in <paramref name="spool"/> instead of memory.</summary>
+        internal ArchiveEntry Spooled(ArchiveEntrySpool spool, long offset, Func<string?, string?> intern) => new ArchiveEntry(this, spool, offset, intern);
 
         /// <summary>
         /// Reads a stored queue item. Returns null when it is not a signed QueueFR v2 entry: no response yet,
-        /// an error response, a v1 entry (whose signature items lack the v2 format nibble), or a response
-        /// without a receipt signature.
+        /// an error response, or a response without a v2 receipt signature (a v1 entry, whose signature items
+        /// lack the v2 format nibble, or an unsigned one).
         /// </summary>
-        public static ArchiveEntry? TryCreate(Guid queueItemId, Guid queueId, long queueRow, string? request, string? response)
+        /// <exception cref="ArchiveEntryException">
+        /// The item is stored but cannot be read: a request or response that is not a JSON object, or a signed
+        /// v2 entry whose identification, receipt moment or signed content cannot be read. An export never
+        /// skips such an entry silently (LNE Ex. 10).
+        /// </exception>
+        public static ArchiveEntry? Read(Guid queueItemId, Guid queueId, long queueRow, string? request, string? response, string? processingVersion = null)
         {
-            if (string.IsNullOrEmpty(request) || string.IsNullOrEmpty(response))
+            if (string.IsNullOrEmpty(response))
             {
                 return null;
             }
+            ArchiveEntryException Unreadable(string reason, Exception? inner)
+                => new ArchiveEntryException(queueItemId, queueRow, $"The queue item {queueItemId} (queue row {queueRow}) cannot be archived: {reason}.", inner);
 
-            JsonElement requestJson, responseJson;
-            try
-            {
-                using (var requestDocument = JsonDocument.Parse(request!))
-                using (var responseDocument = JsonDocument.Parse(response!))
-                {
-                    requestJson = requestDocument.RootElement.Clone();
-                    responseJson = responseDocument.RootElement.Clone();
-                }
-            }
-            catch (JsonException)
-            {
-                return null;
-            }
-
-            if (requestJson.ValueKind != JsonValueKind.Object || responseJson.ValueKind != JsonValueKind.Object)
-            {
-                return null;
-            }
+            var responseJson = ParseObject(response!, "response", Unreadable);
             if (IsErrorState(Long(responseJson, "ftState") ?? 0))
             {
                 return null;
@@ -144,12 +229,101 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             {
                 return null;
             }
-            if (!TryReadChain(String(responseJson, "ftReceiptIdentification"), out var chain, out var counter))
+            if (string.IsNullOrEmpty(request))
+            {
+                throw Unreadable("its response is signed, and its request is empty", null);
+            }
+            var requestJson = ParseObject(request!, "request", Unreadable);
+
+            var identification = String(responseJson, "ftReceiptIdentification");
+            if (!TryReadChain(identification, out var chain, out var counter))
+            {
+                throw Unreadable($"its ftReceiptIdentification '{identification}' names no chain and counter", null);
+            }
+            var moment = Moment(responseJson, "ftReceiptMoment")
+                ?? throw Unreadable($"its ftReceiptMoment '{Property(responseJson, "ftReceiptMoment")?.ToString()}' is no date", null);
+            SignedLinks links;
+            try
+            {
+                links = SignedLinks.Parse(signature!, queueItemId, identification, Long(requestJson, "ftReceiptCase"));
+            }
+            catch (FormatException ex)
+            {
+                throw Unreadable($"the signed content of its receipt signature cannot be read ({ex.Message})", ex);
+            }
+            if (links.ChainCounter != counter)
+            {
+                throw Unreadable($"its signed chain counter {links.ChainCounter} is not the counter of {identification}", null);
+            }
+
+            var content = new ArchiveEntryContent(request!, requestJson, responseJson, signature!, links);
+            return new ArchiveEntry(queueItemId, queueId, queueRow, processingVersion, content, chain, counter, identification!, moment);
+        }
+
+        /// <summary>The certificate serial number of a receipt QR code (a JWS header's <c>kid</c>, else its signed content), or null when its signed content cannot be read.</summary>
+        public static string? CertificateSerialNumberOf(string qrCode)
+        {
+            try
+            {
+                return SignedLinks.CertificateSerialNumberOf(qrCode);
+            }
+            catch (FormatException)
             {
                 return null;
             }
+        }
 
-            return new ArchiveEntry(queueItemId, queueId, queueRow, request!, requestJson, responseJson, chain, counter, signature!);
+        /// <summary>
+        /// The moment a stored response says it was answered, or null when it holds none that can be read:
+        /// the moment an export places an item in its period by, v1 and v2 items alike.
+        /// </summary>
+        public static DateTime? ReceiptMomentOf(string? response)
+        {
+            if (string.IsNullOrEmpty(response))
+            {
+                return null;
+            }
+            try
+            {
+                using var document = JsonDocument.Parse(response!);
+                return document.RootElement.ValueKind == JsonValueKind.Object ? Moment(document.RootElement, "ftReceiptMoment") : null;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>The content of an entry <see cref="Read"/> accepted, loaded again from its stored request and response.</summary>
+        internal static ArchiveEntryContent LoadContent(string request, string response)
+        {
+            static ArchiveEntryException Corrupt(string reason, Exception? inner) => new ArchiveEntryException(Guid.Empty, 0, "A spooled archive entry cannot be read back: " + reason + ".", inner);
+            var responseJson = ParseObject(response, "response", Corrupt);
+            var signature = SignatureData(responseJson, ReceiptSignatureType)!;
+            var requestJson = ParseObject(request, "request", Corrupt);
+            var links = SignedLinks.Parse(signature, null, String(responseJson, "ftReceiptIdentification"), Long(requestJson, "ftReceiptCase"));
+            return new ArchiveEntryContent(request, requestJson, responseJson, signature, links);
+        }
+
+        private static JsonElement ParseObject(string json, string what, Func<string, Exception?, ArchiveEntryException> unreadable)
+        {
+            JsonDocument document;
+            try
+            {
+                document = JsonDocument.Parse(json);
+            }
+            catch (JsonException ex)
+            {
+                throw unreadable($"its {what} is no valid JSON ({ex.Message})", ex);
+            }
+            using (document)
+            {
+                if (document.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    throw unreadable($"its {what} is no JSON object", null);
+                }
+                return document.RootElement.Clone();
+            }
         }
 
         /// <summary>
@@ -186,60 +360,6 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         // ifPOS v2 State: the low 32 bits are 0xEEEE_EEEE on an error and 0xFFFF_FFFF on a failure.
         private static bool IsErrorState(long state) => (state & 0xFFFF_FFFF) is 0xEEEE_EEEE or 0xFFFF_FFFF;
-
-        /// <summary>
-        /// The signed content of the receipt QR code (the <c>ReceiptSignature</c> item): everything before
-        /// its last '.', since a Base64Url signature has none. A '|'-separated data set (LNE, self-certified)
-        /// or a JWS <c>header.payload</c> (Infocert).
-        /// </summary>
-        private static string SignedContent(string qrCode)
-        {
-            var dot = qrCode.LastIndexOf('.');
-            return dot < 0 ? "" : qrCode.Substring(0, dot);
-        }
-
-        private static bool IsDataSet(string signedContent) => signedContent.IndexOf('|') >= 0;
-
-        /// <summary>
-        /// The request field of the LNE data set the QR code carries. The data set is '|'-separated and
-        /// holds exactly one field of the <c>version:hash</c> shape. Null for a JWS (Infocert signs none).
-        /// </summary>
-        private static string? SignedRequestHash(string qrCode)
-        {
-            var content = SignedContent(qrCode);
-            return IsDataSet(content) ? content.Split('|').FirstOrDefault(f => SignedRequestHashField.IsMatch(f)) : null;
-        }
-
-        /// <summary>
-        /// The signing certificate's serial number, read from the signed content as v1.2 carried it: the
-        /// <c>csn</c> of a JWS payload, or the fourth-from-last field of a data set (before the chain
-        /// counter, the start-of-chain flag and the previous signature, ADR 0001). Null when absent.
-        /// </summary>
-        private static string? SignedCertificateSerialNumber(string qrCode)
-        {
-            var content = SignedContent(qrCode);
-            if (IsDataSet(content))
-            {
-                var fields = content.Split('|');
-                return fields.Length >= 4 && fields[fields.Length - 4].Length > 0 ? fields[fields.Length - 4] : null;
-            }
-            var segments = content.Split('.');
-            if (segments.Length != 2)
-            {
-                return null;
-            }
-            try
-            {
-                var payload = segments[1].Replace('-', '+').Replace('_', '/');
-                payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
-                using var json = JsonDocument.Parse(Convert.FromBase64String(payload));
-                return json.RootElement.ValueKind == JsonValueKind.Object ? String(json.RootElement, "csn") : null;
-            }
-            catch (Exception ex) when (ex is FormatException || ex is JsonException)
-            {
-                return null;
-            }
-        }
 
         /// <summary>
         /// The data of the first FR v2 signature item of the given type (low word). The v2 format nibble
@@ -330,5 +450,32 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 ? DateTime.SpecifyKind(moment, DateTimeKind.Utc)
                 : (DateTime?) null;
         }
+    }
+
+    /// <summary>What an entry holds beyond its scalar columns: the stored request and response, and what was signed.</summary>
+    internal sealed class ArchiveEntryContent
+    {
+        public ArchiveEntryContent(string rawRequest, JsonElement request, JsonElement response, string signature, SignedLinks links)
+        {
+            RawRequest = rawRequest;
+            Request = request;
+            Response = response;
+            Signature = signature;
+            Links = links;
+            StateFR = ArchiveEntry.Property(response, "ftStateData") is { ValueKind: JsonValueKind.Object } stateData
+                && ArchiveEntry.Property(stateData, "FR") is { ValueKind: JsonValueKind.Object } fr ? fr : (JsonElement?) null;
+        }
+
+        public string RawRequest { get; }
+
+        public JsonElement Request { get; }
+
+        public JsonElement Response { get; }
+
+        public JsonElement? StateFR { get; }
+
+        public string Signature { get; }
+
+        public SignedLinks Links { get; }
     }
 }

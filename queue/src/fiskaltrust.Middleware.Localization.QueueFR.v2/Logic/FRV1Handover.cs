@@ -51,12 +51,18 @@ public static class FRV1Handover
     /// </returns>
     public static string? Apply(ftQueueFR queueFR, DateTime? lastV1DayEntryMoment, IReadOnlyDictionary<FRReceiptChain, string>? lastV1Signatures = null)
     {
-        var refusal = OpenDayRefusal(queueFR, lastV1DayEntryMoment) ?? OpenLateSigningRefusal(queueFR);
+        var refusal = Refusal(queueFR, lastV1DayEntryMoment);
         if (refusal is not null)
         {
             return refusal;
         }
 
+        FoldAndChain(queueFR, lastV1Signatures);
+        return null;
+    }
+
+    private static void FoldAndChain(ftQueueFR queueFR, IReadOnlyDictionary<FRReceiptChain, string>? lastV1Signatures)
+    {
         var month = queueFR.GetTotals(FRQueueFRColumns.TotalsPrefix(FRTotalsPeriod.Month));
         var year = queueFR.GetTotals(FRQueueFRColumns.TotalsPrefix(FRTotalsPeriod.Year));
 
@@ -67,9 +73,96 @@ public static class FRV1Handover
         {
             queueFR.SetLastSignature(chain, signature);
         }
-
-        return null;
     }
+
+    /// <summary>The v1 chains, by v1 letter, with the v2 chain each continues; the v1 grand-total chain G has none (ADR 0002).</summary>
+    private static readonly (string Letter, FRReceiptChain? Chain, Func<ftQueueFR, long> Counter, Func<ftQueueFR, string?> Hash)[] V1Chains =
+    [
+        ("T", FRReceiptChain.Ticket, q => q.TNumerator, q => q.TLastHash),
+        ("P", FRReceiptChain.PaymentProof, q => q.PNumerator, q => q.PLastHash),
+        ("I", FRReceiptChain.Invoice, q => q.INumerator, q => q.ILastHash),
+        ("B", FRReceiptChain.Bill, q => q.BNumerator, q => q.BLastHash),
+        ("L", FRReceiptChain.Log, q => q.LNumerator, q => q.LLastHash),
+        ("C", FRReceiptChain.Duplicate, q => q.CNumerator, q => q.CLastHash),
+        ("X", FRReceiptChain.Training, q => q.XNumerator, q => q.XLastHash),
+        ("G", null, q => q.GNumerator, q => q.GLastHash),
+        ("A", FRReceiptChain.Archive, q => q.ANumerator, q => q.ALastHash),
+    ];
+
+    /// <summary>
+    /// True for a v1.2 queue not migrated yet: v1 kept a last hash for one of its chains, which v2
+    /// never writes, and no finish-migration receipt has run. Such a queue accepts only the two
+    /// migration receipts (0x4021, 0x4022).
+    /// </summary>
+    public static bool AwaitsMigration(ftQueueFR queueFR)
+        => FRStateV2.Read(queueFR).MigratedAt is null && V1Chains.Any(x => !string.IsNullOrEmpty(x.Hash(queueFR)));
+
+    /// <summary>
+    /// The migration event the finish-migration receipt signs: each v1 chain's last counter and hash,
+    /// and its last signature when v1 storage still holds the chain's last entry.
+    /// </summary>
+    /// <param name="lastV1Signatures">Per v1 letter, the counter and signature of the newest stored v1 entry.</param>
+    public static FRMigrationEvent MigrationEvent(ftQueueFR queueFR, IReadOnlyDictionary<string, (long Counter, string Signature)>? lastV1Signatures)
+        => new()
+        {
+            Chains = V1Chains
+                .Where(x => x.Counter(queueFR) > 0 || !string.IsNullOrEmpty(x.Hash(queueFR)))
+                .Select(x => new FRV1ChainHead
+                {
+                    Chain = x.Letter,
+                    Counter = x.Counter(queueFR),
+                    LastHash = x.Hash(queueFR),
+                    LastSignature = lastV1Signatures is not null && lastV1Signatures.TryGetValue(x.Letter, out var last) && last.Counter == x.Counter(queueFR) ? last.Signature : null,
+                })
+                .ToList(),
+        };
+
+    /// <summary>
+    /// Hands the v1 state over, once, as the signed migration event says: folds the open month into
+    /// the year, sets the v1 signatures that event carries as the previous signatures of the v2 chains,
+    /// and records the migration. Used by the finish-migration receipt and when its entry is replayed.
+    /// </summary>
+    public static void Migrate(ftQueueFR queueFR, FRMigrationEvent migrationEvent, DateTime migratedAt)
+    {
+        if (FRStateV2.Read(queueFR).MigratedAt is not null)
+        {
+            return;
+        }
+
+        var signatures = new Dictionary<FRReceiptChain, string>();
+        foreach (var head in migrationEvent.Chains.Where(x => !string.IsNullOrEmpty(x.LastSignature)))
+        {
+            if (V1Chains.FirstOrDefault(x => x.Letter == head.Chain).Chain is { } chain)
+            {
+                signatures[chain] = head.LastSignature!;
+            }
+        }
+
+        FoldAndChain(queueFR, signatures);
+        FRStateV2.Update(queueFR, x => x.MigratedAt = migratedAt);
+    }
+
+    /// <summary>
+    /// Why the v1 queue cannot be migrated yet, or null: no v1.2 archive receipt, an open v1 day, an
+    /// open late-signing mode, or v1 messages still pending.
+    /// </summary>
+    public static string? Refusal(ftQueueFR queueFR, DateTime? lastV1DayEntryMoment)
+        => ArchiveReceiptRefusal(queueFR) ?? OpenDayRefusal(queueFR, lastV1DayEntryMoment) ?? OpenLateSigningRefusal(queueFR) ?? PendingMessagesRefusal(queueFR);
+
+    /// <summary>
+    /// A v1.2 archive receipt precedes the migration (ADR 0003 amendment 2026-11-11): the v1 history is
+    /// then the v1.2 archive, and the first v2 archive range starts on that receipt.
+    /// </summary>
+    private static string? ArchiveReceiptRefusal(ftQueueFR queueFR)
+        => queueFR.ALastQueueItemId is null
+            ? "The v1 queue has no archive receipt. A half migration to v2 starts only after a v1.2 archive receipt (0x3011), so that the v1 history is archived by v1.2 and the first v2 archive starts on that receipt. Send the archive receipt on the v1 queue, then migrate."
+            : null;
+
+    /// <summary>Messages a v1.2 queue still holds for the POS are returned by a v1 zero receipt only: v2 never hands them over.</summary>
+    private static string? PendingMessagesRefusal(ftQueueFR queueFR)
+        => queueFR.MessageCount > 0
+            ? $"The v1 queue holds {queueFR.MessageCount} pending message(s) since {queueFR.MessageMoment?.ToString("u", CultureInfo.InvariantCulture) ?? "an unknown moment"}. A half migration to v2 starts only once they are read: send a zero receipt (0x2000) on the v1 queue, then migrate."
+            : null;
 
     private static string? OpenDayRefusal(ftQueueFR queueFR, DateTime? lastV1DayEntryMoment)
     {

@@ -85,6 +85,7 @@ public class InfoCertArchiveExportTests
     {
         ftCashBoxID = _cashBoxId,
         cbTerminalID = "1",
+        cbUser = "operator-1",
         cbReceiptReference = Guid.NewGuid().ToString("N")[..8],
         cbReceiptMoment = DateTime.UtcNow,
         Currency = Currency.EUR,

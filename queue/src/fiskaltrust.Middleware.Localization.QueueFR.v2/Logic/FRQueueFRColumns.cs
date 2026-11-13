@@ -26,6 +26,7 @@ public static class FRQueueFRColumns
         FRReceiptChain.DailyClosing => queueFR.ZNumerator,
         FRReceiptChain.MonthlyClosing => queueFR.MNumerator,
         FRReceiptChain.YearlyClosing => queueFR.YNumerator,
+        FRReceiptChain.Archive => queueFR.ANumerator,
         _ => throw new ArgumentOutOfRangeException(nameof(chain), chain, null),
     };
 
@@ -45,6 +46,7 @@ public static class FRQueueFRColumns
             case FRReceiptChain.DailyClosing: queueFR.ZNumerator = numerator; break;
             case FRReceiptChain.MonthlyClosing: queueFR.MNumerator = numerator; break;
             case FRReceiptChain.YearlyClosing: queueFR.YNumerator = numerator; break;
+            case FRReceiptChain.Archive: queueFR.ANumerator = numerator; break;
             default: throw new ArgumentOutOfRangeException(nameof(chain), chain, null);
         }
     }
@@ -65,6 +67,7 @@ public static class FRQueueFRColumns
             FRReceiptChain.DailyClosing => queueFR.ZLastSignature,
             FRReceiptChain.MonthlyClosing => queueFR.MLastSignature,
             FRReceiptChain.YearlyClosing => queueFR.YLastSignature,
+            FRReceiptChain.Archive => queueFR.ALastSignature,
             _ => throw new ArgumentOutOfRangeException(nameof(chain), chain, null),
         };
         return string.IsNullOrEmpty(signature) ? null : signature;
@@ -86,6 +89,7 @@ public static class FRQueueFRColumns
             case FRReceiptChain.DailyClosing: queueFR.ZLastSignature = signature; break;
             case FRReceiptChain.MonthlyClosing: queueFR.MLastSignature = signature; break;
             case FRReceiptChain.YearlyClosing: queueFR.YLastSignature = signature; break;
+            case FRReceiptChain.Archive: queueFR.ALastSignature = signature; break;
             default: throw new ArgumentOutOfRangeException(nameof(chain), chain, null);
         }
     }
@@ -101,6 +105,7 @@ public static class FRQueueFRColumns
         FRTotalsPeriod.Day => "GDay",
         FRTotalsPeriod.Month => "GMonth",
         FRTotalsPeriod.Year => "GYear",
+        FRTotalsPeriod.Archive => "A",
         _ => throw new ArgumentOutOfRangeException(nameof(period), period, "The perpetual total is the sum of the ticket and invoice totals."),
     };
 
@@ -125,6 +130,11 @@ public static class FRQueueFRColumns
         (x => x.PIUnknown, (x, v) => x.PIUnknown = v, "PITotalUnknown"),
     ];
 
+    /// <summary>
+    /// A block of totals: the class columns, and the per-rate turnover kept in <see cref="FRStateV2.RateTotals"/>
+    /// (market-fr#221, ADR 0021). A block v2 has never written (a queue migrated from v1.2) gets its per-rate turnover from its
+    /// class columns, each class under its French rate (<see cref="RatesOfClasses"/>).
+    /// </summary>
     public static FRTotals GetTotals(this ftQueueFR queueFR, string prefix)
     {
         var totals = new FRTotals();
@@ -132,6 +142,9 @@ public static class FRQueueFRColumns
         {
             set(totals, (decimal) Column(prefix, suffix).GetValue(queueFR)!);
         }
+        totals.ByRate = FRStateV2.Read(queueFR).RateTotals?.TryGetValue(prefix, out var byRate) == true
+            ? new Dictionary<string, decimal>(byRate)
+            : RatesOfClasses(totals);
         return totals;
     }
 
@@ -141,7 +154,24 @@ public static class FRQueueFRColumns
         {
             Column(prefix, suffix).SetValue(queueFR, get(totals));
         }
+        FRStateV2.Update(queueFR, state =>
+        {
+            state.RateTotals ??= new Dictionary<string, Dictionary<string, decimal>>();
+            state.RateTotals[prefix] = totals.ByRate.Where(x => x.Value != 0).ToDictionary(x => x.Key, x => x.Value);
+        });
     }
+
+    /// <summary>
+    /// The class totals under their French rate: Normal 20, Reduced1 5.5, Reduced2 10, ReducedS 2.1, Zero 0, and the
+    /// unknown class under <see cref="FRTotals.UnknownRateKey"/>. v1.2 kept only the classes, so a migrated block's
+    /// ReducedS is taken as 2.1 % (the only super-reduced rate of metropolitan France).
+    /// </summary>
+    public static Dictionary<string, decimal> RatesOfClasses(FRTotals totals)
+        => new (string Key, decimal Amount)[]
+        {
+            ("20", totals.CINormal), ("10", totals.CIReduced2), ("5.5", totals.CIReduced1), ("2.1", totals.CIReducedS),
+            ("0", totals.CIZero), (FRTotals.UnknownRateKey, totals.CIUnknown),
+        }.Where(x => x.Amount != 0).ToDictionary(x => x.Key, x => x.Amount);
 
     private static PropertyInfo Column(string prefix, string suffix)
         => typeof(ftQueueFR).GetProperty(prefix + suffix) ?? throw new InvalidOperationException($"ftQueueFR has no column {prefix}{suffix}.");

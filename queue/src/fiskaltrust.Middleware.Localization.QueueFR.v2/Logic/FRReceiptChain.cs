@@ -33,7 +33,11 @@ public enum FRReceiptChain
     /// </summary>
     Technical,
 
-    /// <summary>Non-fiscal documents handed to the customer: bills, pro formas, delivery notes.</summary>
+    /// <summary>
+    /// Documents handed to the customer that are not the sale's receipt: notes (0x0006), pro formas (0x0007), orders
+    /// (0x3004) and receipts without an obligation to issue them (0x0003). A delivery note (0x0005) maps here but is
+    /// recorded without a signature, so it never enters the chain.
+    /// </summary>
     Bill,
 
     /// <summary>Technical event and accounting logs.</summary>
@@ -56,10 +60,22 @@ public enum FRReceiptChain
 
     /// <summary>The closing chain of yearly closings.</summary>
     YearlyClosing,
+
+    /// <summary>
+    /// Archive receipts. As in v1.2, each one closes an archive period and chains on the previous
+    /// archive receipt's signature (market-fr#221, decided 2026-11-09).
+    /// </summary>
+    Archive,
 }
 
 public static class FRReceiptChainExt
 {
+    /// <summary>The archive receipt; ifPOS has no name for the case yet.</summary>
+    public const ReceiptCase ArchiveReceipt = (ReceiptCase) 0x3011;
+
+    /// <summary>0x0006 (Note [FR]); ifPOS has no name for the case yet.</summary>
+    public const ReceiptCase Note = (ReceiptCase) 0x0006;
+
     /// <summary>The letter that prefixes the national numbering of this chain.</summary>
     public static string Identifier(this FRReceiptChain chain) => chain switch
     {
@@ -75,6 +91,7 @@ public static class FRReceiptChainExt
         FRReceiptChain.DailyClosing => "Z",
         FRReceiptChain.MonthlyClosing => "M",
         FRReceiptChain.YearlyClosing => "Y",
+        FRReceiptChain.Archive => "A",
         _ => "T",
     };
 
@@ -122,6 +139,7 @@ public static class FRReceiptChainExt
                 ReceiptCase.CopyReceiptPrintExistingReceipt0x3010 => FRReceiptChain.Duplicate,
                 ReceiptCase.Pay0x3005 => FRReceiptChain.PaymentProof,
                 ReceiptCase.Order0x3004 => FRReceiptChain.Bill,
+                ArchiveReceipt => FRReceiptChain.Archive,
                 _ => FRReceiptChain.Log,
             };
         }

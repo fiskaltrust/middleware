@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         private static async Task<byte[]> Archive()
         {
             using var certificate = TestFixtures.EcdsaCertificate();
-            return await ArchivePackagerTests.Package(ArchivePackagerTests.TwoSubArchives(), certificate);
+            return await ArchivePackagerTests.Package(ArchivePackagerTests.OneFile(), certificate);
         }
 
         private static string Manifest(byte[] archive) => Encoding.UTF8.GetString(ArchivePackagerTests.ReadEntry(archive, ArchivePackager<TestRecord>.ManifestFileName));
@@ -126,30 +126,6 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
-        public async Task A_sub_archive_above_the_in_memory_limit_verifies_through_a_temporary_file()
-        {
-            var archive = await Archive();
-
-            ArchiveVerifier.Verify(new MemoryStream(archive), new ArchiveVerifier.VerifierLimits { InMemorySubArchiveBytes = 0 }).AllErrors.Should().BeEmpty();
-        }
-
-        [Fact]
-        public async Task A_sub_archive_that_lists_sub_archives_is_not_followed()
-        {
-            var archive = await Archive();
-            var subName = SubArchiveNames(archive).First();
-
-            // A sub manifest naming one of its own files as a sub-archive would make the verifier recurse.
-            var nested = ArchivePackagerTests.ReplaceEntry(archive, subName, sub => ArchivePackagerTests.ReplaceEntry(sub, ArchivePackager<TestRecord>.ManifestFileName,
-                content => Encoding.UTF8.GetBytes(ReplaceFirst(Encoding.UTF8.GetString(content), "{", "{\"subArchives\":[{\"fileName\":\"journal-T.csv\"}],"))));
-            var result = ArchiveVerifier.Verify(new MemoryStream(nested));
-
-            result.IsValid.Should().BeFalse();
-            result.SubArchives.Should().Contain(s => s.Errors.Any(e => e.Contains("nest one level")));
-            result.SubArchives.Should().OnlyContain(s => s.SubArchives.Count == 0);
-        }
-
-        [Fact]
         public async Task A_zip_with_too_many_entries_is_refused()
         {
             var result = ArchiveVerifier.Verify(new MemoryStream(await Archive()), new ArchiveVerifier.VerifierLimits { MaxEntries = 3 });
@@ -173,23 +149,17 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         public async Task A_forged_uncompressed_size_is_a_verification_error(uint declared)
         {
             var archive = await Archive();
-            var subName = SubArchiveNames(archive).First();
+            const string name = "journal-T.csv";
 
-            // The sub-archive's zip headers claim fewer bytes than it holds. .NET stops reading at the declared size,
+            // The file's zip headers claim fewer bytes than it holds. .NET stops reading at the declared size,
             // so memory stays bounded, and the shortened content fails the manifest's size and hash; a runtime that
             // reads on is caught by the declared-size check.
-            var forged = ForgeUncompressedSize(archive, subName, declared);
+            var forged = ForgeUncompressedSize(archive, name, declared);
             var verify = () => ArchiveVerifier.Verify(new MemoryStream(forged));
 
             var result = verify.Should().NotThrow().Subject;
             result.IsValid.Should().BeFalse();
-            result.Errors.Should().Contain(e => e.StartsWith(subName) && (e.Contains("declares") || e.Contains("cannot be decompressed") || e.Contains("manifest says")));
-        }
-
-        private static string[] SubArchiveNames(byte[] archive)
-        {
-            using var zip = new ZipArchive(new MemoryStream(archive));
-            return zip.Entries.Select(e => e.FullName).Where(n => n.StartsWith("subarchive_")).ToArray();
+            result.Errors.Should().Contain(e => e.StartsWith(name) && (e.Contains("declares") || e.Contains("cannot be decompressed") || e.Contains("manifest says")));
         }
 
         /// <summary>Rewrites the uncompressed size of one entry in its local header and its central-directory record.</summary>

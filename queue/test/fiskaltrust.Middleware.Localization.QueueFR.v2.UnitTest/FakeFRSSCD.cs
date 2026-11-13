@@ -1,5 +1,6 @@
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
@@ -34,6 +35,15 @@ public class FakeFRSSCD : IFRSSCD
 
     public bool HasSignatureCreationData { get; set; } = true;
 
+    /// <summary>
+    /// When set, the response carries a receipt QR code whose signed data set names this certificate
+    /// serial, as an LNE SCU's does (the certificate serial is the fourth field from the end).
+    /// </summary>
+    public string? CertificateSerialNumber { get; set; }
+
+    /// <summary>Answers success with an empty signature, as a faulty SCU could.</summary>
+    public bool EmptySignature { get; set; }
+
     public Task<EchoResponse> EchoAsync(EchoRequest echoRequest) => Task.FromResult(new EchoResponse { Message = echoRequest.Message });
 
     public Task<FRSSCDInfo> GetInfoAsync() => Task.FromResult(new FRSSCDInfo
@@ -57,7 +67,18 @@ public class FakeFRSSCD : IFRSSCD
             return Task.FromResult(response.ToSigningFailure(FailWith, FailState));
         }
 
-        var signature = $"sig-{++_calls}";
+        var signature = EmptySignature ? "" : $"sig-{++_calls}";
+        if (CertificateSerialNumber is not null)
+        {
+            request.ReceiptResponse.ftSignatures.Add(new SignatureItem
+            {
+                ftSignatureType = (SignatureType) (long) Models.SignatureTypeFR.ReceiptSignature,
+                ftSignatureFormat = SignatureFormat.QRCode,
+                Caption = "www.fiskaltrust.fr",
+                Data = $"siret|{CertificateSerialNumber}|{request.ChainCounter}|{(string.IsNullOrEmpty(previousSignature) ? "N" : "O")}|{previousSignature}.{signature}",
+            });
+        }
+
         return Task.FromResult((new ProcessResponse { ReceiptResponse = request.ReceiptResponse }, signature));
     }
 }

@@ -87,7 +87,7 @@ public abstract class LateSigningScenarioTests
         JetCodes(firstLate).Should().Equal("70");
         JetCodes(secondLate).Should().BeEmpty();
         JetCodes(ordinary).Should().BeEmpty();
-        JetCodes(zero).Should().Equal("120");
+        JetCodes(zero).Should().Equal(new string?[] { "120" }, "the queue asks for JET 120 on the zero receipt that ends late signing (contract §6, ADR 0009)");
         JetCodes(after).Should().BeEmpty();
 
         zero.ftSignatures.Single(x => x.Caption == "Défaillance enregistrée").Data
@@ -100,11 +100,12 @@ public abstract class LateSigningScenarioTests
         var late = await SignAsync(CashSale(lateSigned: true, cbReceiptMoment: DateTime.UtcNow.AddHours(-1)));
         var zero = await SignAsync(Request(ReceiptCase.ZeroReceipt0x2000));
 
+        // JET 70 is prompted by the item on the first late-signed receipt, JET 120 by the item on the
+        // zero receipt that ends the mode (contract §6, ADR 0009).
         foreach (var (trigger, code) in new[] { (late, "70"), (zero, "120") })
         {
-            var item = trigger.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.JetEvent));
             var jetEvent = Request(ReceiptCase.ProtocolTechnicalEvent0x3001);
-            jetEvent.ftReceiptCaseData = item.Data;
+            jetEvent.ftReceiptCaseData = trigger.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.JetEvent)).Data;
             jetEvent.cbPreviousReceiptReference = RequestReferenceOf(trigger);
 
             var response = await SignAsync(jetEvent);
@@ -135,6 +136,7 @@ public abstract class LateSigningScenarioTests
     {
         ftCashBoxID = _cashBoxId,
         cbTerminalID = "1",
+        cbUser = "operator-1",
         cbReceiptReference = Guid.NewGuid().ToString("N")[..8],
         cbReceiptMoment = cbReceiptMoment ?? DateTime.UtcNow,
         Currency = Currency.EUR,

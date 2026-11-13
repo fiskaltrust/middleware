@@ -1,4 +1,7 @@
 using System;
+using System.Globalization;
+using System.Linq;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
@@ -12,7 +15,7 @@ using fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 namespace fiskaltrust.Middleware.SCU.FR.InfoCert;
 
 /// <summary>
-/// The Infocert flavour of the NF525 signature. It serializes the receipt into a json data set,
+/// The Infocert flavour of the NF525 signature. It builds the string InfoCert defines for the entry (R13, R12 or R19, ADR 0021),
 /// signs it as an ES256 JWS and returns the JWS signature segment, which the next entry of the
 /// chain carries (ADR 0001). The signature travels as one self-describing token a verifier can
 /// check against the certificate without knowing the middleware.
@@ -45,6 +48,12 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         AttestationNumber = _configuration.AttestationNumber,
         SoftwareName = _configuration.SoftwareName,
         SoftwareVersion = _configuration.SoftwareVersion,
+        SoftwareCategory = _configuration.SoftwareCategory,
+        Rcs = _configuration.Rcs,
+        Naf = _configuration.Naf,
+        LegalForm = _configuration.LegalForm,
+        VatOption = _configuration.VatOption,
+        ElectronicAddress = _configuration.ElectronicAddress,
         SignatureCreationDataAvailable = true,
     }.ToFRSSCDInfo());
 
@@ -65,75 +74,86 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
 
-        // A technical event is an entry of the JET (R19 v4.2): an event without a valid R19 or
-        // editor code and a label cannot be signed as one, so it is refused before it takes a
-        // number of chain L (market-fr#200).
-        if (InfoCertJetEvent.IsJetEvent(receiptRequest) && !InfoCertJetEvent.TryRead(receiptRequest, out _, out var jetError))
+        // An event the POS sends (0x3001, 0x3002) is an entry of the JET (R19 v4.2): an event without a valid code and a
+        // label cannot be signed as one, so it is refused before it takes a number of its chain (market-fr#200, ADR 0021).
+        if (FRJetEvent.CarriesPosEvent(receiptRequest) && !FRJetEvent.TryReadFor(receiptRequest, out _, out var jetError))
         {
             return response.ToSigningFailure($"The technical event cannot enter the NF525 technical event journal: {jetError}", StateFR.Error);
         }
 
-        var totals = InfoCertTotals.From(receiptRequest);
-        var payload = new InfoCertReceiptPayload
-        {
-            QueueId = response.ftQueueID,
-            QueueItemId = response.ftQueueItemID,
-            CashBoxIdentification = response.ftCashBoxIdentification,
-            Siret = _configuration.Siret,
-            Rcs = NullIfEmpty(_configuration.Rcs),
-            Naf = NullIfEmpty(_configuration.Naf),
-            LegalForm = NullIfEmpty(_configuration.LegalForm),
-            VatOption = NullIfEmpty(_configuration.VatOption),
-            ElectronicAddress = NullIfEmpty(_configuration.ElectronicAddress),
-            ReceiptId = response.ftReceiptIdentification,
-            ReceiptMoment = response.ftReceiptMoment,
-            ReceiptCase = (long) receiptRequest.ftReceiptCase,
-            Currency = receiptRequest.Currency.ToString(),
-            CopyNumber = FRStateData.CopyNumber(response),
-            Totalizer = totals.Totalizer,
-            CINormal = totals.CINormal,
-            CIReduced1 = totals.CIReduced1,
-            CIReduced2 = totals.CIReduced2,
-            CIReducedS = totals.CIReducedS,
-            CIZero = totals.CIZero,
-            CIUnknown = totals.CIUnknown,
-            PICash = totals.PICash,
-            PINonCash = totals.PINonCash,
-            PIInternal = totals.PIInternal,
-            PIUnknown = totals.PIUnknown,
-            ChainCounter = request.ChainCounter,
-            PreviousSignatureCarriedOver = FRChaining.Flag(previousSignature),
-            PreviousSignature = previousSignature ?? "",
-            CertificateSerialNumber = _configuration.CertificateSerialNumber,
-            AttestationNumber = _configuration.AttestationNumber,
-            PeriodTotals = request.PeriodTotals,
-        };
+        // market-fr#108, #221: the JWS payload is the string R13/R12/R19 define for this kind of entry, not a JSON object.
+        // The protected header names the certificate serial as kid.
+        var (jws, signature) = _signer.Sign(InfoCertSignedString.Build(request, previousSignature), _configuration.CertificateSerialNumber);
 
-        // A technical event signs its R19 JET content instead of the receipt data set (market-fr#200).
-        var jetPayload = InfoCertJetPayload.TryCreate(request, previousSignature, _configuration.CertificateSerialNumber);
-        var (jws, signature) = _signer.Sign(jetPayload is null ? JsonSerializer.Serialize(payload) : JsonSerializer.Serialize(jetPayload));
-
-        // The QR code is the compact JWS; the certificate serial is its payload's csn, as in v1.2.
+        // The QR code is the compact JWS; the certificate serial is its header's kid.
         response.AddReceiptQrCode(jws);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
+        // market-fr#221 (ADR 0021, R13 ENC-TIK-SOC-*): the seller's identity for the header of a document, not signed.
+        response.AddIssuerItem(receiptRequest, _configuration.Issuer());
         // market-fr#131: the NF525 mention (NF525 V2.3 §6.1.6.1) is the whole line, so the caption
-        // stays empty. It is left out rather than emitted incomplete.
-        var mention = InfoCertMention.Build(_configuration.SoftwareCategory, _configuration.AttestationNumber, signature, _configuration.SoftwareName, _configuration.SoftwareVersion);
+        // stays empty. It is left out rather than emitted incomplete. A sandbox is not certified, so
+        // "en cours de certif." stands where the attestation number goes.
+        var productNumber = _configuration.Sandbox ? FRSandbox.PendingCertification : _configuration.AttestationNumber;
+        var mention = InfoCertMention.Build(_configuration.SoftwareCategory, productNumber, signature, _configuration.SoftwareName, _configuration.SoftwareVersion);
         if (mention is not null)
         {
             response.AddSignatureItem(SignatureTypeFR.CertificationBody, "", mention);
         }
         response.AddPeriodTotalsItems(request.PeriodTotals);
+        AddJetItems(receiptRequest, response);
 
         // The VAT summary is printed on the receipt (R13 v4.2 Récapitulatif), so it travels as
-        // signature items (ADR 0011), one per rate.
-        foreach (var (rate, line) in InfoCertVatSummary.From(receiptRequest) ?? new Dictionary<string, InfoCertVatRate>())
+        // signature items (ADR 0011), one per rate. R13 forbids it (I) on a note, a pro forma and an
+        // order, which are not the sale's receipt (NF525 V2.3 §6.2.2.3); what is signed is unchanged.
+        if (!PrintsNoVatSummary(receiptRequest))
         {
-            response.AddSignatureItem(SignatureTypeFR.VatSummary, $"TVA {rate} %", InfoCertVatSummary.Format(line));
+            foreach (var (rate, line) in InfoCertVatSummary.From(receiptRequest) ?? new Dictionary<string, InfoCertVatRate>())
+            {
+                response.AddSignatureItem(SignatureTypeFR.VatSummary, $"TVA {rate} %", InfoCertVatSummary.Format(line));
+            }
         }
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
+
+    /// <summary>JET 80, R19 "Démarrage du terminal, connexion, ouverture de session".</summary>
+    public const int TerminalStartJetCode = 80;
+
+    public const string TerminalStartJetLabel = "Démarrage du terminal, connexion, ouverture de session";
+
+    private static readonly JsonSerializerOptions _jetJson = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
+    /// <summary>
+    /// The JET event the Infocert SCU raises itself (contract §6): 80 on a non-training 0x4001
+    /// (Queue-start receipt), as a JET item on that response, which the POS sends as a 0x3001
+    /// (Protocol (technical event)), like the queue's JET 20 on an archive receipt (ADR 0009). The
+    /// Data has the queue's JET item format, <c>{"FR":{Code, Message, Information}}</c>. JET 40 and 127
+    /// are the POS's own events, sent before the last archive receipt; the SCU raises nothing on
+    /// 0x4002 (Queue-stop receipt).
+    /// </summary>
+    private static void AddJetItems(ReceiptRequest request, ReceiptResponse response)
+    {
+        if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training) || request.ftReceiptCase.Case() != ReceiptCase.InitialOperationReceipt0x4001)
+        {
+            return;
+        }
+
+        var information = string.Join("; ", new[]
+        {
+            ("cbReceiptReference", request.cbReceiptReference),
+            ("ftReceiptIdentification", response.ftReceiptIdentification),
+        }.Where(x => !string.IsNullOrEmpty(x.Item2)).Select(x => $"{x.Item1}={x.Item2}"));
+        response.ftSignatures.Add(new SignatureItem
+        {
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = ((SignatureType) (ulong) (long) SignatureTypeFR.JetEvent).WithFlag(SignatureTypeFlags.VisualizationOptional),
+            Caption = "JET",
+            Data = JsonSerializer.Serialize(new { FR = new { Code = TerminalStartJetCode.ToString(CultureInfo.InvariantCulture), Message = TerminalStartJetLabel, Information = string.IsNullOrEmpty(information) ? null : information } }, _jetJson),
+        });
+    }
+
+    /// <summary>A note (0x0006), a pro forma (0x0007) or an order (0x3004), training or not.</summary>
+    private static bool PrintsNoVatSummary(ReceiptRequest request) => ((long) request.ftReceiptCase & 0xFFFF) is 0x0006 or 0x0007 or 0x3004;
 
     public Task<FRSigningCertificate> GetSigningCertificateAsync()
         => Task.FromResult(FRHashSigning.SigningCertificate(_signer.Key, _configuration.CertificateBase64, _configuration.CertificateSerialNumber, CertificationBody));

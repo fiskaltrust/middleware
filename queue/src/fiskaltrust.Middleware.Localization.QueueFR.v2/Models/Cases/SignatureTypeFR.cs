@@ -14,10 +14,15 @@ public enum SignatureTypeFR : long
     DayTotals = 0x4652_2000_0000_0003,
     MonthTotals = 0x4652_2000_0000_0004,
     YearTotals = 0x4652_2000_0000_0005,
+    ArchiveTotals = 0x4652_2000_0000_0006,
     PerpetualTotals = 0x4652_2000_0000_0007,
     /// <summary>Reserved, not emitted since ADR 0001 (market-fr#122); see the SCU abstraction.</summary>
     ChainHash = 0x4652_2000_0000_0008,
+    /// <summary>The certification-body line an LNE or InfoCert SCU prints; the self-certified SCU emits none.</summary>
+    CertificationBody = 0x4652_2000_0000_000A,
     StoredNotSigned = 0x4652_2000_0000_000B,
+    /// <summary>The shift totals a shift closing prints (low word 0x0002 stays reserved); see the SCU abstraction.</summary>
+    ShiftPeriodTotals = 0x4652_2000_0000_000D,
     InitialOperationReceipt = 0x4652_2000_0000_0010,
     OutOfOperationReceipt = 0x4652_2000_0000_0011,
     /// <summary>
@@ -26,6 +31,13 @@ public enum SignatureTypeFR : long
     /// (market-fr#231, #208). Printing it is optional.
     /// </summary>
     JetEvent = 0x4652_2000_0000_0012,
+
+    /// <summary>
+    /// The seller's identity the SCU prints after the receipt header, one <c>Label : value</c> line per configured value,
+    /// not signed (market-fr#221). Allocated here too so the queue never reuses it; the archive reads the issuer columns
+    /// of chains T, B, P and I from it.
+    /// </summary>
+    Issuer = 0x4652_2000_0000_0013,
 }
 
 public static class SignatureTypeFRExt

@@ -7,14 +7,22 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
 
 public static class ftActionJournalFactory
 {
-    public static ftActionJournal CreateDailyClosingActionJournal(ftQueue queue, ReceiptRequest request, ReceiptResponse receiptResponse)
-        => CreateActionJournal(receiptResponse.ftQueueID, request.ftReceiptCase.ToString("X"), receiptResponse.ftQueueItemID, "Daily-Closing receipt was processed.", JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 }));
-
-    public static ftActionJournal CreateMonthlyClosingActionJournal(ftQueue queue, ReceiptRequest request, ReceiptResponse receiptResponse)
-        => CreateActionJournal(receiptResponse.ftQueueID, request.ftReceiptCase.ToString("X"), receiptResponse.ftQueueItemID, "Monthly-Closing receipt was processed.", JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 }));
-
-    public static ftActionJournal CreateYearlyClosingActionJournal(ftQueue queue, ReceiptRequest request, ReceiptResponse receiptResponse)
-        => CreateActionJournal(receiptResponse.ftQueueID, request.ftReceiptCase.ToString("X"), receiptResponse.ftQueueItemID, "Yearly-Closing receipt was processed.", JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 }));
+    /// <summary>A signed closing: dated by its receipt moment, with its identification, the period it closed and its totals.</summary>
+    public static ftActionJournal CreateClosingActionJournal(ReceiptRequest request, ReceiptResponse signedResponse, string message)
+    {
+        var fr = MiddlewareStateData.FromReceiptResponse(signedResponse).FR;
+        var journal = CreateActionJournal(signedResponse.ftQueueID, request.ftReceiptCase.ToString("X"), signedResponse.ftQueueItemID, message, JsonConvert.SerializeObject(new
+        {
+            signedResponse.ftReceiptIdentification,
+            signedResponse.ftReceiptMoment,
+            fr?.Closing?.ClosingType,
+            fr?.Closing?.PeriodStart,
+            fr?.Closing?.PeriodEnd,
+            fr?.Totals,
+        }));
+        journal.Moment = signedResponse.ftReceiptMoment;
+        return journal;
+    }
 
     public static ftActionJournal CreateInitialOperationActionJournal(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
@@ -41,6 +49,19 @@ public static class ftActionJournalFactory
         };
         return CreateActionJournal(receiptResponse.ftQueueID, $"{request.ftReceiptCase:X}-{nameof(DeactivateQueueFR)}", receiptResponse.ftQueueItemID, $"Out-of-Operation receipt. Queue-ID: {receiptResponse.ftQueueID}", JsonConvert.SerializeObject(notification));
     }
+
+    /// <summary>
+    /// A file cut at the one-year limit without an archive receipt (market-fr ADR 0018). The portal
+    /// builds that fixed file from the first and last record named here.
+    /// </summary>
+    public static ftActionJournal CreateForcedArchiveActionJournal(ReceiptRequest request, ReceiptResponse receiptResponse, Logic.FROpenArchiveFile.ForcedFile file)
+        => CreateActionJournal(receiptResponse.ftQueueID, $"{request.ftReceiptCase:X}-ForcedArchive", receiptResponse.ftQueueItemID,
+            $"The archive file from queue item {file.First.ftQueueItemId} to {file.Last.ftQueueItemId} reached the one-year limit: it is archived without an archive receipt.",
+            JsonConvert.SerializeObject(new
+            {
+                First = new { file.First.ftQueueItemId, ftReceiptMoment = file.First.ftReceiptMoment.ToUniversalTime().ToString("O") },
+                Last = new { file.Last.ftQueueItemId, ftReceiptMoment = file.Last.ftReceiptMoment.ToUniversalTime().ToString("O") },
+            }));
 
     public static ftActionJournal CreateLateSigningStartedActionJournal(ReceiptRequest request, ReceiptResponse receiptResponse)
         => CreateActionJournal(receiptResponse.ftQueueID, $"{request.ftReceiptCase:X}-LateSigningStarted", receiptResponse.ftQueueItemID,

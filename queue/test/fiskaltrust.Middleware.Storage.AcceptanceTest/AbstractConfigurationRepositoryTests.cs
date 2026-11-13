@@ -526,6 +526,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             entryToUpdate.ZLastSignature = "Z-signature";
             entryToUpdate.MLastSignature = "M-signature";
             entryToUpdate.YLastSignature = null;
+            entryToUpdate.ALastSignature = "A-signature";
+            entryToUpdate.StateV2 = "{\"FirstMoment\":null}";
 
             await sut.InsertOrUpdateQueueFRAsync(entryToUpdate);
 
@@ -537,6 +539,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             updatedEntry.TLastSignature.Should().Be("T-signature");
             updatedEntry.MLastSignature.Should().Be("M-signature");
             updatedEntry.YLastSignature.Should().BeNull();
+            updatedEntry.ALastSignature.Should().Be("A-signature");
+            updatedEntry.StateV2.Should().Be("{\"FirstMoment\":null}");
         }
 
         [Fact]

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
@@ -44,14 +45,24 @@ public class LneConfiguration
     /// <summary>Issuer claim: <c>debits</c> or <c>receipts</c> (SOC-REF-REGTVA, BT-8).</summary>
     public string? VatOption { get; set; }
 
-    /// <summary>Issuer claim: electronic address, <c>SIREN</c> or <c>SIREN_XXX</c> under scheme 0225 (BT-34).</summary>
+    /// <summary>
+    /// No longer used (market-fr#221): the seller's electronic address (BT-34) is eInvoicing data and is
+    /// neither signed nor reported. Still read so that a configuration carrying it starts; the SCU logs once that it
+    /// is ignored.
+    /// </summary>
     public string? ElectronicAddress { get; set; }
+
+    /// <summary>
+    /// True in a sandbox (the Launcher's <c>sandbox</c> key). The certification line then reads
+    /// "en cours de certif. LNE", without a certificate number (<see cref="FRSandbox"/>).
+    /// </summary>
+    [JsonIgnore]
+    public bool Sandbox { get; set; }
 
     public static LneConfiguration FromConfiguration(Dictionary<string, object> configuration)
     {
-        var serialized = JsonSerializer.Serialize(configuration);
-        var result = JsonSerializer.Deserialize<LneConfiguration>(serialized, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-            ?? new LneConfiguration();
+        var result = FRScuConfiguration.Read<LneConfiguration>(configuration);
+        result.Sandbox = FRSandbox.IsSet(configuration);
 
         if (string.IsNullOrWhiteSpace(result.Siret))
         {
@@ -63,11 +74,25 @@ public class LneConfiguration
             throw new FRValidationException("The LNE SCU requires a PrivateKey (base64 encoded secp256r1 key) in its configuration.");
         }
 
+        // Ref LNE 1.8 Ex. 9: the serial selects the certificate that verifies the signature, and the LNE certificate
+        // number is the certification mention printed on every receipt.
+        if (string.IsNullOrWhiteSpace(result.CertificateSerialNumber))
+        {
+            throw new FRValidationException("The LNE SCU requires the CertificateSerialNumber of its signing certificate in its configuration.");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.LneCertificateNumber))
+        {
+            throw new FRValidationException("The LNE SCU requires the LneCertificateNumber of the certified solution in its configuration.");
+        }
+
+        FRScuConfiguration.CheckSerialMatchesCertificate("LNE", result.CertificateBase64, result.CertificateSerialNumber);
+        FRIssuerClaims.RejectCharacter("LNE", nameof(Siret), result.Siret, Signing.LneDataSetBuilder.FieldSeparator);
+        FRIssuerClaims.RejectCharacter("LNE", nameof(CertificateSerialNumber), result.CertificateSerialNumber, Signing.LneDataSetBuilder.FieldSeparator);
         FRIssuerClaims.ValidateVatOption("LNE", result.VatOption);
         FRIssuerClaims.RejectCharacter("LNE", nameof(Rcs), result.Rcs, Signing.LneDataSetBuilder.FieldSeparator);
         FRIssuerClaims.RejectCharacter("LNE", nameof(Naf), result.Naf, Signing.LneDataSetBuilder.FieldSeparator);
         FRIssuerClaims.RejectCharacter("LNE", nameof(LegalForm), result.LegalForm, Signing.LneDataSetBuilder.FieldSeparator);
-        FRIssuerClaims.RejectCharacter("LNE", nameof(ElectronicAddress), result.ElectronicAddress, Signing.LneDataSetBuilder.FieldSeparator);
 
         return result;
     }

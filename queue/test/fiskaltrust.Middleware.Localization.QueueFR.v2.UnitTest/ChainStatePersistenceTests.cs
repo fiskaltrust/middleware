@@ -32,6 +32,7 @@ public class ChainStatePersistenceTests
 
     public ChainStatePersistenceTests()
     {
+        _repository.Seed(new ftQueueFR { ftQueueFRId = _queueId });
         _chains = new FRChainStateProvider(new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(_repository.Object)), _queueId);
         _pipeline = new FRSigningPipeline(_sscd, _chains);
         _storage = new FRQueueStorageProvider(_inner.Object, _chains);
@@ -60,12 +61,14 @@ public class ChainStatePersistenceTests
 
     private Task<ftQueueFR> StoredAsync() => _repository.GetQueueFRAsync(_queueId);
 
+    private static bool Unchanged(ftQueueFR stored) => stored.TNumerator == 0 && string.IsNullOrEmpty(stored.TLastSignature);
+
     [Fact]
     public async Task ASignatureAlone_StoresNothing()
     {
         await _pipeline.SignAsync(Ticket());
 
-        (await StoredAsync()).Should().BeNull("the queue item that holds the signature is not stored yet");
+        Unchanged(await StoredAsync()).Should().BeTrue("the queue item that holds the signature is not stored yet");
     }
 
     [Fact]
@@ -148,7 +151,7 @@ public class ChainStatePersistenceTests
         maxRunning.Should().Be(1);
     }
 
-    /// <summary>An ftQueueFR store whose writes can be made to fail.</summary>
+    /// <summary>An ftQueueFR store whose writes can be made to fail and that, like a real one, hands out copies.</summary>
     private sealed class FlakyConfigurationRepository
     {
         private readonly InMemoryConfigurationRepository _store = new();
@@ -156,15 +159,19 @@ public class ChainStatePersistenceTests
 
         public FlakyConfigurationRepository()
         {
-            _mock.Setup(x => x.GetQueueFRAsync(It.IsAny<Guid>())).Returns((Guid id) => _store.GetQueueFRAsync(id));
+            _mock.Setup(x => x.GetQueueFRAsync(It.IsAny<Guid>())).Returns((Guid id) => GetQueueFRAsync(id));
             _mock.Setup(x => x.InsertOrUpdateQueueFRAsync(It.IsAny<ftQueueFR>()))
-                .Returns((ftQueueFR queue) => Fail ? Task.FromException(new IOException("storage unavailable")) : _store.InsertOrUpdateQueueFRAsync(queue));
+                .Returns((ftQueueFR queue) => Fail ? Task.FromException(new IOException("storage unavailable")) : _store.InsertOrUpdateQueueFRAsync(Copy(queue)!));
         }
 
         public bool Fail { get; set; }
 
         public IConfigurationRepository Object => _mock.Object;
 
-        public Task<ftQueueFR> GetQueueFRAsync(Guid id) => _store.GetQueueFRAsync(id);
+        public async Task<ftQueueFR> GetQueueFRAsync(Guid id) => Copy(await _store.GetQueueFRAsync(id))!;
+
+        public void Seed(ftQueueFR queue) => _store.InsertOrUpdateQueueFRAsync(queue).GetAwaiter().GetResult();
+
+        private static ftQueueFR? Copy(ftQueueFR? queue) => queue is null ? null : System.Text.Json.JsonSerializer.Deserialize<ftQueueFR>(System.Text.Json.JsonSerializer.Serialize(queue));
     }
 }

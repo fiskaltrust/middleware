@@ -4,6 +4,8 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
@@ -26,23 +28,47 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
     private readonly FRSigningPipeline _pipeline;
     private readonly AsyncLazy<IJournalFRCopyPayloadRepository> _copies;
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItems;
+    private readonly FRArchiveReceipt? _archive;
 
-    public ProtocolCommandProcessorFR(FRSigningPipeline pipeline, AsyncLazy<IJournalFRCopyPayloadRepository> copies, AsyncLazy<IMiddlewareQueueItemRepository> queueItems)
+    public ProtocolCommandProcessorFR(FRSigningPipeline pipeline, AsyncLazy<IJournalFRCopyPayloadRepository> copies, AsyncLazy<IMiddlewareQueueItemRepository> queueItems, FRArchiveReceipt? archive = null)
     {
+        _archive = archive;
         _pipeline = pipeline;
         _copies = copies;
         _queueItems = queueItems;
     }
 
-    /// <summary>v1.2 does not sign an unspecified protocol (v0 0x14).</summary>
-    public Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
+    /// <summary>v1.2 does not sign an unspecified protocol (v0 0x14), except in training, where it is signed on chain X.</summary>
+    public Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => _pipeline.SignTrainingOrStoreAsync(request);
 
-    public Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
+    /// <summary>
+    /// A JET event is validated here, before any SCU signs it, so every certification body refuses the
+    /// same malformed events (one JET behaviour, market-fr#200): a refused event takes no number of
+    /// its chain. Training events are checked too: the InfoCert SCU signs every 0x3001 as an R19 JET
+    /// string (ADR 0021).
+    /// </summary>
+    public Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request) => SignPosEventAsync(request);
 
-    public Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
+    /// <summary>
+    /// An accounting event carries the R19 event the POS sends, like 0x3001, with an accounting code
+    /// only: 160, 180 or an editor code from 900 up (ADR 0021). Refused alike whichever SCU signs.
+    /// </summary>
+    public Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => SignPosEventAsync(request);
 
-    /// <summary>v1.2 does not sign an internal consumption (v0 0x0D).</summary>
-    public Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
+    private Task<ProcessCommandResponse> SignPosEventAsync(ProcessCommandRequest request)
+    {
+        if (!FRJetEvent.TryReadFor(request.ReceiptRequest, out _, out var error))
+        {
+            request.ReceiptResponse.SetReceiptResponseError($"The event cannot enter the NF525 technical event journal: {error}");
+            request.ReceiptResponse.ftState = (State) StateFR.Error;
+            return Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, []));
+        }
+
+        return _pipeline.SignAsync(request);
+    }
+
+    /// <summary>v1.2 does not sign an internal consumption (v0 0x0D), except in training, where it is signed on chain X.</summary>
+    public Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => _pipeline.SignTrainingOrStoreAsync(request);
 
     /// <summary>v1.2 signs an order as a bill (v0 0x08) in the bill chain, with the provisional-document mention.</summary>
     public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request)
@@ -57,6 +83,8 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
         request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePaymentProofSignature());
         return _pipeline.SignAsync(request);
     }
+
+    public Task<ProcessCommandResponse?> ArchiveReceipt0x3011Async(ProcessCommandRequest request) => _archive?.SignAsync(request) ?? Task.FromResult<ProcessCommandResponse?>(null);
 
     /// <summary>
     /// A copy is numbered per copied receipt (R13 ENC-DUP-PRN-NUM, NF525 V2.3 §6.3.1.3; market-fr#235)
@@ -84,6 +112,14 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
             return await _pipeline.SignAsync(request).ConfigureAwait(false);
         }
 
+        var original = await CopiedReceiptAsync(copiedReceiptReference).ConfigureAwait(false);
+        if (original is not null && await CopyBanAsync(original.Value, copiedReceiptReference).ConfigureAwait(false) is { } ban)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(ban);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+        var copiedCase = original?.Request.ftReceiptCase.Case();
+
         var copies = await _copies;
         await copies.InsertAsync(CopyRecord(request.ReceiptResponse, copiedReceiptReference)).ConfigureAwait(false);
 
@@ -93,9 +129,102 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
         var stateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
         stateData.FR ??= new MiddlewareStateDataFR();
         stateData.FR.CopyNumber = copyNumber;
+        stateData.FR.CopyType = original is { } copied ? FRArchiveStateData.DocumentTypeOf(copied.Request) : null;
+        stateData.FR.CopiedReceiptIdentification = original?.Identification;
         request.ReceiptResponse.ftStateData = stateData;
 
-        return await _pipeline.SignAsync(request).ConfigureAwait(false);
+        var signed = await _pipeline.SignAsync(request).ConfigureAwait(false);
+        if (FRSigningPipeline.Succeeded(signed))
+        {
+            FRJetItems.AddForCopy(request.ReceiptRequest, signed.receiptResponse, copiedReceiptReference, copiedCase);
+        }
+
+        return signed;
+    }
+
+    /// <summary>The copied receipt: its queue item, its request and its fiscal number.</summary>
+    private readonly record struct CopiedReceipt(ftQueueItem Item, ReceiptRequest Request, string? Identification);
+
+    /// <summary>
+    /// The pre-transaction documents (NF525 V2.3 §6.3.3.6): a note, a pro forma and an order, which a sale finalises.
+    /// </summary>
+    private static bool IsPreTransaction(ReceiptRequest request) => request.ftReceiptCase.Case() is (ReceiptCase) 0x0006 or (ReceiptCase) 0x0007 or ReceiptCase.Order0x3004;
+
+    /// <summary>
+    /// Why the copied receipt may not be copied, or null. NF525 V2.3 §6.3.3.6: no duplicate of a pre-transaction document
+    /// once a receipt that references it finalised it; §6.3.3.7: none of an abandoned one, which the queue sees as a void
+    /// referencing it. Only a pre-transaction original reads on from its own time stamp; any other copy reads nothing more.
+    /// </summary>
+    private async Task<string?> CopyBanAsync(CopiedReceipt original, string copiedReceiptReference)
+    {
+        if (!IsPreTransaction(original.Request))
+        {
+            return null;
+        }
+
+        var queueItems = await _queueItems;
+        await foreach (var item in queueItems.GetEntriesOnOrAfterTimeStampAsync(original.Item.TimeStamp).ConfigureAwait(false))
+        {
+            if (item.ftQueueItemId == original.Item.ftQueueItemId || string.IsNullOrEmpty(item.request) || !WasIssued(item))
+            {
+                continue;
+            }
+
+            ReceiptRequest? later;
+            try
+            {
+                later = JsonSerializer.Deserialize<ReceiptRequest>(item.request);
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
+
+            if (later is null || later.ftReceiptCase.Case() == ReceiptCase.CopyReceiptPrintExistingReceipt0x3010 || !References(later, copiedReceiptReference))
+            {
+                continue;
+            }
+
+            return later.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+                ? $"The receipt {copiedReceiptReference} was voided by {later.cbReceiptReference}: an abandoned document cannot be copied (NF525 §6.3.3.7)."
+                : $"The receipt {copiedReceiptReference} was finalised by {later.cbReceiptReference}: a pre-transaction document cannot be copied once finalised (NF525 §6.3.3.6).";
+        }
+
+        return null;
+    }
+
+    private static bool References(ReceiptRequest request, string reference)
+        => request.cbPreviousReceiptReference?.Match(single => single == reference, group => group.Contains(reference)) == true;
+
+    /// <summary>
+    /// The copied receipt: the signed, non-copy queue item with that reference.
+    /// Null when it is not stored here (a v1.2 receipt answered by another queue, a wrong reference).
+    /// </summary>
+    private async Task<CopiedReceipt?> CopiedReceiptAsync(string copiedReceiptReference)
+    {
+        var queueItems = await _queueItems;
+        await foreach (var item in queueItems.GetByReceiptReferenceAsync(copiedReceiptReference).ConfigureAwait(false))
+        {
+            if (string.IsNullOrEmpty(item.request) || !WasIssued(item))
+            {
+                continue;
+            }
+
+            try
+            {
+                var original = JsonSerializer.Deserialize<ReceiptRequest>(item.request);
+                if (original is not null && original.ftReceiptCase.Case() != ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)
+                {
+                    return new CopiedReceipt(item, original, IdentificationOf(item.response));
+                }
+            }
+            catch (JsonException)
+            {
+                // Not a v2 request; look further.
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -138,6 +267,18 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
     /// stopped while signing it) and that response is not an error. The queue item is stored before
     /// the journal row, so a missing one was never answered either.
     /// </summary>
+    private static string? IdentificationOf(string? response)
+    {
+        try
+        {
+            return string.IsNullOrEmpty(response) ? null : JsonSerializer.Deserialize<ReceiptResponse>(response)?.ftReceiptIdentification;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private static bool WasIssued(ftQueueItem? queueItem)
     {
         if (string.IsNullOrEmpty(queueItem?.response))

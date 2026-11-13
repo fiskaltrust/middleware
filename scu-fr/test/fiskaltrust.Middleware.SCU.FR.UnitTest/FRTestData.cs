@@ -52,6 +52,30 @@ public static class FRTestData
         return request;
     }
 
+    public static readonly Guid PreviousArchive = Guid.Parse("11111111-2222-3333-4444-555555555555");
+
+    /// <summary>
+    /// An archive receipt as the queue hands it over: the archive boundaries in the FR block of
+    /// ftStateData (market-fr#221), as JSON or as the queue's own object.
+    /// </summary>
+    public static ProcessRequest Archive(bool asJson = true)
+    {
+        var request = Request();
+        request.ReceiptRequest.ftReceiptCase = ((ReceiptCase) 0x3011).WithCountry("FR");
+        var boundaries = new FRArchiveBoundaries
+        {
+            PreviousArchiveQueueItemId = PreviousArchive,
+            FirstContainedReceiptQueueItemId = Guid.NewGuid(),
+            FirstContainedReceiptMoment = new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc),
+            LastContainedReceiptQueueItemId = Guid.NewGuid(),
+            LastContainedReceiptMoment = new DateTime(2026, 3, 1, 10, 0, 0, DateTimeKind.Utc),
+            Day = new FRTotals { Totalizer = 12.5m },
+        };
+        object stateData = new Dictionary<string, object> { ["FR"] = new Dictionary<string, object> { ["Archive"] = boundaries } };
+        request.ReceiptResponse.ftStateData = asJson ? System.Text.Json.JsonSerializer.SerializeToElement(stateData) : stateData;
+        return request;
+    }
+
     public static ReceiptRequest CashSaleRequest() => new()
     {
         ftCashBoxID = Guid.NewGuid(),

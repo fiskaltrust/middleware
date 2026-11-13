@@ -28,36 +28,40 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             "\"ftChargeItemCaseData\":{\"FR\":{\"DiscountCode\":\"D1\",\"a/b\":[1,null]}}}]," +
             "\"cbPayItems\":[{\"Position\":1,\"Description\":\"Cash\",\"Amount\":4.40,\"ftPayItemCase\":" + (0x4652_2000_0008_0001L) + "}]" + extra + "}";
 
-        internal static string Response(string identification, string signature, string serial = "SERIAL-1", long state = 0x4652_2000_0000_0000, long signatureFormatNibble = 2, string extraItems = "", string moment = "2026-03-01T10:00:01.4560000Z") =>
-            "{\"ftQueueID\":\"" + QueueId + "\",\"ftCashBoxIdentification\":\"cashbox-fr\",\"ftReceiptIdentification\":\"" + identification + "\"," +
+        internal static string Response(string identification, string signature, string serial = "SERIAL-1", long state = 0x4652_2000_0000_0000, long signatureFormatNibble = 2, string extraItems = "", string moment = "2026-03-01T10:00:01.4560000Z", string stateData = "", string? previous = null) =>
+            "{" + (stateData.Length > 0 ? "\"ftStateData\":" + stateData + "," : "") + "\"ftQueueID\":\"" + QueueId + "\",\"ftCashBoxIdentification\":\"cashbox-fr\",\"ftReceiptIdentification\":\"" + identification + "\"," +
             "\"ftReceiptMoment\":\"" + moment + "\",\"ftState\":" + state + ",\"ftSignatures\":[" +
-            Item(0x0001, Qr(signature, serial), signatureFormatNibble) + "," + Item(0x0009, "12345678901234", signatureFormatNibble) + extraItems + "]}";
+            Item(0x0001, Qr(signature, serial, identification, previous), signatureFormatNibble) + "," + Item(0x0009, "12345678901234", signatureFormatNibble) + extraItems + "]}";
 
         /// <summary>
-        /// The receipt QR code for a test signature, carrying <paramref name="serial"/> where v1.2 did: a
-        /// fake JWS <c>h.p.sig</c> gets a payload with <c>csn</c>, a bare signature gets a minimal data set
-        /// whose fourth-from-last field is the serial. A data set given in full (it holds '|') is kept as is.
+        /// The receipt QR code for a test signature, signing what an SCU signs (ADR 0001): the serial where v1.2
+        /// carried it, the chain counter of <paramref name="identification"/>, the start-of-chain flag and
+        /// <paramref name="previous"/>. A fake JWS <c>h.p.sig</c> gets a payload with those claims, a bare signature
+        /// a minimal data set ending with them. A data set given in full (it holds '|') or a JWS with a real header is kept as is.
         /// </summary>
-        internal static string Qr(string signature, string serial)
+        internal static string Qr(string signature, string serial, string identification = "ft1#T1", string? previous = null)
         {
-            if (signature.Contains('|') || string.IsNullOrEmpty(serial))
+            if (signature.Contains('|') || (signature.Split('.').Length == 3 && !signature.StartsWith("h.")))
             {
                 return signature;
             }
+            ArchiveEntry.TryReadChain(identification, out _, out var counter);
+            var flag = string.IsNullOrEmpty(previous) ? "N" : "O";
             var dot = signature.LastIndexOf('.');
             if (dot < 0)
             {
-                return $"12345678901234|{serial}|1|O|.{signature}";
+                return $"12345678901234|{serial}|{counter}|{flag}|{previous}.{signature}";
             }
-            var payload = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("{\"csn\":\"" + serial + "\"}")).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+            var claims = "{\"siret\":\"12345678901234\",\"csn\":\"" + serial + "\",\"chainCounter\":" + counter + ",\"previousSignatureCarriedOver\":\"" + flag + "\",\"previousSignature\":\"" + previous + "\"}";
+            var payload = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(claims)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
             return $"h.{payload}.{signature.Substring(dot + 1)}";
         }
 
         private static string Item(long type, string data, long nibble) =>
             "{\"ftSignatureFormat\":1,\"ftSignatureType\":" + (0x4652_0000_0000_0000L | (nibble << 44) | type) + ",\"Caption\":\"x\",\"Data\":\"" + data + "\"}";
 
-        internal static ArchiveEntry Entry(string identification, string signature, long row, string serial = "SERIAL-1", long receiptCase = 0x4652_2000_0000_0001, string moment = "2026-03-01T10:00:01.4560000Z")
-            => ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, row, Request(receiptCase), Response(identification, signature, serial, moment: moment))!;
+        internal static ArchiveEntry Entry(string identification, string signature, long row, string serial = "SERIAL-1", long receiptCase = 0x4652_2000_0000_0001, string moment = "2026-03-01T10:00:01.4560000Z", string? previous = null)
+            => ArchiveEntry.Read(Guid.NewGuid(), QueueId, row, Request(receiptCase), Response(identification, signature, serial, moment: moment, previous: previous))!;
 
         private static async Task<string> Write(ICsvFileDefinition<ArchiveEntry> file, params ArchiveEntry[] entries)
         {
@@ -86,7 +90,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             => ArchiveEntry.TryReadChain(identification, out _, out _).Should().BeFalse();
 
         [Fact]
-        public void TryCreate_ReadsASignedV2Entry()
+        public void Read_ReadsASignedV2Entry()
         {
             var entry = Entry("ft1#T3", "h.p.sig3", 5);
 
@@ -100,114 +104,11 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
-        public void RequestHash_IsTheCanonicalRequestFieldOfTheSignedDataSet()
-        {
-            // An LNE QR code, the data set then its signature: SIRET, issuer claims, queue and queue item
-            // ids, then the canonical request field (ADR 0013), never recomputed by the archive.
-            const string signedField = "1:n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=";
-            var dataSet = string.Join("|", "12345678901234", "", "", "", "", "", QueueId, Guid.Empty, signedField, "cashbox-fr", "ft1#T1", "2026-03-01T10:00:01.4560000Z", "4652200000000001", "EUR", "4.40", "13:4.40", "1:4.40", "", "SERIAL-1", "1", "0", "");
-            var lne = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", dataSet + ".t1"))!;
-            var infoCert = Entry("ft1#T1", "h.p.t1", 1);
-
-            lne.RequestHash.Should().Be(signedField);
-            lne.CertificateSerialNumber.Should().Be("SERIAL-1", "the serial is the data set's fourth-from-last field");
-            lne.ChainedSignature.Should().Be("t1");
-            infoCert.RequestHash.Should().BeNull("the InfoCert SCU signs no request hash");
-        }
-
-        [Fact]
-        public async Task JournalFile_WritesTheSignedRequestHash()
-        {
-            const string signedField = "1:n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=";
-            var entry = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "12345678901234|" + signedField + "|x.t1"))!;
-
-            var csv = await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.Journals.Single(j => j.Letter == "T")), entry);
-
-            var lines = csv.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-            var column = Array.IndexOf(lines[0].Split(';'), "RequestHash");
-            lines[1].Split(';')[column].Should().Be(signedField);
-        }
-
-        [Fact]
-        public void TryCreate_SkipsErrorResponsesV1EntriesAndUnsignedOnes()
-        {
-            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "s", state: 0x4652_2000_EEEE_EEEE)).Should().BeNull("an error response is no chain entry");
-            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "s", signatureFormatNibble: 0)).Should().BeNull("v1 signature types have no v2 format nibble");
-            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), null).Should().BeNull("no response yet");
-            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), "not json").Should().BeNull();
-        }
-
-        [Fact]
-        public void Linker_ChainsEachChainOnItsOwnPreviousSignature()
-        {
-            var t1 = Entry("ft1#T1", "h.p.t1", 1);
-            var e1 = Entry("ft2#E1", "e1", 2);
-            var t2 = Entry("ft3#T2", "h.p.t2", 3);
-            var linker = new ArchiveChainLinker();
-
-            foreach (var entry in new[] { t1, e1, t2 })
-            {
-                linker.Link(entry);
-            }
-
-            t1.StartOfChain.Should().BeTrue();
-            t1.PreviousSignature.Should().BeNull();
-            e1.StartOfChain.Should().BeTrue();
-            t2.StartOfChain.Should().BeFalse();
-            t2.PreviousSignature.Should().Be("t1", "the JWS chains on its signature segment (ADR 0001)");
-        }
-
-        [Fact]
-        public void Linker_ChainsABareSignatureWhole()
-        {
-            // LNE and the in-memory SCU store the bare Base64Url signature they also return to the queue as
-            // the chain value; InfoCert stores the JWS and returns its signature segment (ADR 0001).
-            var t1 = Entry("ft1#T1", "lne-sig-1", 1);
-            var t2 = Entry("ft2#T2", "lne-sig-2", 2);
-            var linker = new ArchiveChainLinker();
-
-            linker.Link(t1);
-            linker.Link(t2);
-
-            t2.PreviousSignature.Should().Be("lne-sig-1");
-        }
-
-        [Fact]
-        public void Linker_IgnoresAChainHashItem()
-        {
-            // ADR 0001: the SCUs chain on the signature. A ChainHash item (0x0008) is the shape the SCUs had before
-            // fiskaltrust/middleware#824; the archive does not link on it.
-            var t1 = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "sig-1", extraItems: "," + Item(0x0008, "chain-hash-1", 2)))!;
-            var t2 = Entry("ft2#T2", "sig-2", 2);
-            var linker = new ArchiveChainLinker();
-
-            linker.Link(t1);
-            linker.Link(t2);
-
-            t2.PreviousSignature.Should().Be("sig-1");
-        }
-
-        [Fact]
-        public void Linker_LeavesThePreviousSignatureEmptyWhenThePreviousEntryWasNotSeen()
-        {
-            var t5 = Entry("ft9#T5", "t5", 9);
-
-            new ArchiveChainLinker().Link(t5);
-
-            t5.StartOfChain.Should().BeFalse();
-            t5.PreviousSignature.Should().BeNull();
-        }
-
-        [Fact]
         public async Task JournalFile_HoldsTheJournalsChainsWithTheCommonColumns()
         {
             var t1 = Entry("ft1#T1", "h.p.t1", 1);
             var z1 = Entry("ft2#Z1", "z1", 2);
             var e1 = Entry("ft3#E1", "e1", 3);
-            foreach (var entry in new[] { t1, z1, e1 })
-            {
-                new ArchiveChainLinker().Link(entry);
-            }
 
             var tickets = await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x001)!), t1, z1, e1);
             var technical = await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x004)!), t1, z1, e1);
@@ -215,8 +116,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
 
             var lines = tickets.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             lines.Should().HaveCount(2);
-            lines[0].Should().Be("ftQueueItemID;ftQueueID;ftCashBoxIdentification;ftQueueRow;Chain;ftReceiptIdentification;ChainCounter;StartOfChain;PreviousSignature;ftReceiptMoment;cbReceiptMoment;cbReceiptReference;cbPreviousReceiptReference;ftReceiptCase;cbTerminalID;cbUser;cbArea;ftState;RequestHash;Siret;CertificateSerialNumber;Training;Signature");
-            lines[1].Should().Be($"{t1.QueueItemId};{QueueId};cashbox-fr;1;T;ft1#T1;1;true;;2026-03-01T10:00:01.4560000Z;2026-03-01T10:00:00.1230000Z;R-1;;0x4652200000000001;T1;\"{{\"\"Name\"\":\"\"Ana\"\"}}\";;0x4652200000000000;;12345678901234;SERIAL-1;false;{Qr("h.p.t1", "SERIAL-1")}");
+            lines[0].Should().Be("ftQueueItemID;ftQueueID;ftCashBoxIdentification;ftQueueRow;Chain;ftReceiptIdentification;ChainCounter;StartOfChain;PreviousSignature;ftReceiptMoment;cbReceiptMoment;cbReceiptReference;cbPreviousReceiptReference;ftReceiptCase;cbTerminalID;cbUser;cbArea;ftState;RequestHash;Siret;Siren;IssuerName;IssuerNameType;IssuerAddress;IssuerPostalCode;IssuerCity;IssuerCountry;IssuerVatNumber;Rcs;Naf;LegalForm;ShareCapital;VatOption;ElectronicAddress;CertificateSerialNumber;SoftwareVersion;Training;Signature;TotalHT;PrintCount;GuestCount;DocumentType;OperationType;TrainingMention;ManagerId;DiscountTotal;LineCount;Totalizer;CINormal;CIDiscounted1;CIDiscounted2;CISuperReduced1;CIZero;CIUnknown;PICash;PINonCash;PIInternal;PIUnknown;CustomerName;CustomerId;CustomerStreet;CustomerZip;CustomerCity;CustomerCountrySubentity;CustomerCountry;CustomerVATId;CustomerTaxId;CustomerEndpointId;CustomerReference");
+            lines[1].Should().Be($"{t1.QueueItemId};{QueueId};cashbox-fr;1;T;ft1#T1;1;true;;2026-03-01T10:00:01.4560000Z;2026-03-01T10:00:00.1230000Z;R-1;;0x4652200000000001;T1;\"{{\"\"Name\"\":\"\"Ana\"\"}}\";;0x4652200000000000;;12345678901234;;;;;;;;;;;;;;;SERIAL-1;;false;{Qr("h.p.t1", "SERIAL-1", "ft1#T1")};;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;");
             technical.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(';')[4])
                 .Should().Equal(new[] { "E" }, "each ADR 0002 chain has its own journal");
             daily.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(';')[4])
@@ -232,7 +133,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             var chargeItems = await Write(files.Single(f => f.FileName == ArchiveV2Files.ChargeItemsFileName), t1);
             var payItems = await Write(files.Single(f => f.FileName == ArchiveV2Files.PayItemsFileName), t1);
 
-            chargeItems.Should().Contain($"{t1.QueueItemId};ft1#T1;1;;\"Café; crème\";2;;;4.40;10;0x4652200000000013;;D1;");
+            chargeItems.Should().Contain($"{t1.QueueItemId};ft1#T1;1;;\"Café; crème\";2;;;;4.40;true;;10;;;0x4652200000000013;;;;;;;false;false;false\r\n", "the discount code of a line comes from the discount applied to it, stored by the queue; this line has none");
             payItems.Should().Contain($"{t1.QueueItemId};ft1#T1;1;0x4652200000080001;Cash;4.40;;2026-03-01T10:00:01.4560000Z;;;true");
         }
 
@@ -259,7 +160,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         public async Task CaseData_KeepsTheBoundariesOfPreviousReceiptReferences()
         {
             // The journal column joins with commas, so ["a,b","c"] and ["a","b,c"] read the same there.
-            var entry = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(extra: ",\"cbPreviousReceiptReference\":[\"a,b\",\"c\"]"), Response("ft1#T1", "t1"))!;
+            var entry = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, Request(extra: ",\"cbPreviousReceiptReference\":[\"a,b\",\"c\"]"), Response("ft1#T1", "t1"))!;
 
             var caseData = await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.CaseDataFileName), entry);
 
@@ -275,47 +176,228 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         [Fact]
         public void ChainAnchors_HaveOneEntryPerJournalWithRows_WithItsFirstRowAndPreviousSignatureColumn()
         {
-            var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft1#T2", "t2", 2), Entry("ft1#I1", "i1", 3, receiptCase: 0x4652_2000_0000_1001) };
-            var linker = new ArchiveChainLinker();
-            foreach (var entry in entries)
-            {
-                linker.Link(entry);
-            }
-            var subArchive = new SubArchive<ArchiveEntry>(ArchiveV2Files.KeyOf(entries[0]), new ArchivePeriod(new DateTime(2026, 1, 1), new DateTime(2027, 1, 1)), entries.Skip(1).ToList(), null, null);
+            var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft1#T2", "t2", 2, previous: "t1"), Entry("ft1#I1", "i1", 3, receiptCase: 0x4652_2000_0000_1001) };
+            var file = ArchiveSplitter.Split(entries.Skip(1).ToList(), e => e.ReceiptMoment, ArchiveV2Files.KeyOf, new ArchivePeriod(new DateTime(2026, 1, 1), new DateTime(2027, 1, 1))).Single();
 
-            var anchors = ArchiveV2Files.ChainAnchorsOf(subArchive);
+            var anchors = ArchiveV2Files.ChainAnchorsOf(file);
 
             anchors.Select(a => a.Chain).Should().Equal("T", "I");
             anchors[0].FirstReceiptIdentification.Should().Be("ft1#T2");
-            anchors[0].PreviousSignature.Should().Be(entries[1].PreviousSignature).And.NotBeEmpty("T2 covers T1, archived before this sub-archive");
+            anchors[0].PreviousSignature.Should().Be(entries[1].PreviousSignature).And.NotBeEmpty("T2 covers T1, archived in an earlier file");
             anchors[1].PreviousSignature.Should().BeEmpty("I1 starts its chain");
         }
 
         [Fact]
-        public async Task Package_WritesEveryV2FileAndVerifies()
+        public async Task Package_WritesEveryV2FileIntoOneStandaloneFileAndVerifies()
         {
-            var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft2#T2", "t2", 2, serial: "SERIAL-2", moment: "2026-06-01T10:00:00.0000000Z") };
-            var linker = new ArchiveChainLinker();
-            foreach (var entry in entries)
-            {
-                linker.Link(entry);
-            }
-            var archive = ArchiveSplitter.Split(entries, e => e.ReceiptMoment, ArchiveV2Files.KeyOf, new ArchivePeriod(new DateTime(2026, 1, 1), new DateTime(2027, 1, 1))).Single();
+            var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft2#T2", "t2", 2, serial: "SERIAL-2", moment: "2026-06-01T10:00:00.0000000Z", previous: "t1") };
+            var files = ArchiveSplitter.Split(entries, e => e.ReceiptMoment, ArchiveV2Files.KeyOf, new ArchivePeriod(new DateTime(2026, 1, 1), new DateTime(2027, 1, 1)));
             using var certificate = TestFixtures.EcdsaCertificate();
             using var output = new MemoryStream();
 
-            await new ArchivePackager<ArchiveEntry>(new[] { ArchiveV2Files.CreateWriter() }, new X509ArchiveSigner(certificate))
-                .WriteAsync(archive, new ArchiveMetadata("12345678901234", DateTime.UtcNow), output);
+            files.Select(f => f.Key.CertificateSerialNumber).Should().Equal(new[] { "SERIAL-1", "SERIAL-2" }, "an SCU switch ends the file (ADR 0019)");
+            await ArchiveV2Files.CreatePackager(_ => new X509ArchiveSigner(certificate)).WriteAsync(files[0], new ArchiveMetadata("12345678901234", DateTime.UtcNow), output);
 
-            output.Position = 0;
-            ArchiveVerifier.Verify(new MemoryStream(output.ToArray())).Errors.Should().BeEmpty();
+            var result = ArchiveVerifier.Verify(new MemoryStream(output.ToArray()));
+            result.Errors.Should().BeEmpty();
+            result.Manifest!.Schema.Should().Be("LNE", "every manifest says how to read Signature, whoever signs");
+            result.Manifest.ChainAnchors.Should().ContainSingle(a => a.Chain == "T");
+            result.Manifest.FirstRecord!.ReceiptIdentification.Should().Be("ft1#T1");
             using var zip = new ZipArchive(new MemoryStream(output.ToArray()));
-            zip.Entries.Select(e => e.Name).Should().Contain(new[] { "subarchive_SERIAL_1_v2_1.zip", "subarchive_SERIAL_2_v2_1.zip" }, "an SCU switch splits the archive (ADR 0005)");
-            using var sub = new ZipArchive(zip.GetEntry("subarchive_SERIAL_1_v2_1.zip")!.Open());
-            sub.Entries.Select(e => e.Name).Should().Contain(ArchiveV2Files.Journals.Select(j => j.FileName)
-                .Concat(new[] { ArchiveV2Files.ChargeItemsFileName, ArchiveV2Files.PayItemsFileName, ArchiveV2Files.JournalTypesFileName, ArchiveV2Files.CaseDataFileName }));
-            using var reader = new StreamReader(sub.GetEntry(ArchiveV2Files.JournalTypesFileName)!.Open(), Encoding.UTF8);
-            (await reader.ReadToEndAsync()).Should().Contain("00A;D;Copy\r\n").And.Contain("00D;Z;Daily closing\r\n").And.NotContain(";G;").And.StartWith("Code;Chain;Description\r\n000;;Status information QueueFR\r\n001;T;Ticket");
+            zip.Entries.Select(e => e.Name).Should().Contain(ArchiveV2Files.Journals.Select(j => j.FileName)
+                .Concat(new[]
+                {
+                    ArchiveV2Files.ChargeItemsFileName, ArchiveV2Files.PayItemsFileName, ArchiveV2Files.VatSummaryFileName, ArchiveV2Files.SignaturesFileName,
+                    ArchiveV2Files.JetFileName, ArchiveV2Files.CaseDataFileName, ArchiveV2Files.ComplianceParametersFileName, ArchiveReadmeFile.ReadmeFileName,
+                }));
+            zip.Entries.Select(e => e.Name).Should().NotContain("journal-types.csv", "the journal names are in the file names and README.txt (decided 2026-11-06)");
+            zip.Entries.Should().NotContain(e => e.Name.EndsWith(".zip"));
+            using var reader = new StreamReader(zip.GetEntry(ArchiveReadmeFile.ReadmeFileName)!.Open(), Encoding.UTF8);
+            var readme = await reader.ReadToEndAsync();
+            readme.Should().Contain("== 4.1 Colonnes communes à tous les journaux ==").And.Contain("== 4.2 journal-T-ticket.csv ==");
+            readme.Should().Contain("archive_<numéro de série>").And.NotContain("subarchive_").And.NotContain("scu_*.cer");
+        }
+
+        private const string StoredState = "{\"FR\":{\"Totals\":{\"Totalizer\":4.40,\"CINormal\":0,\"CIDiscounted1\":0,\"CIDiscounted2\":4.40,\"CISuperReduced1\":0,\"CIZero\":0,\"CIUnknown\":0,\"PICash\":4.40,\"PINonCash\":0,\"PIInternal\":0,\"PIUnknown\":0}," +
+            "\"ChargeItems\":[{\"Position\":1,\"VATAmount\":0.40,\"AmountHT\":4.00,\"UnitPriceHT\":2.00,\"VATNature\":\"00\"}]," +
+            "\"VATSummary\":{\"10\":{\"AmountHT\":4.00,\"VATAmount\":0.40,\"AmountTTC\":4.40,\"VATNature\":\"00\"}}}}";
+
+        [Fact]
+        public async Task SalesJournalAndChargeItems_ReadTheValuesTheQueueStored()
+        {
+            var t1 = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "h.p.t1", stateData: StoredState), "1.3.80+abc")!;
+
+            var journal = Rows(await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x001)!), t1));
+            var lines = Rows(await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.ChargeItemsFileName), t1));
+            var vat = Rows(await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.VatSummaryFileName), t1));
+
+            journal[0]["SoftwareVersion"].Should().Be("1.3.80", "the contract writes major.minor.patch (#124)");
+            journal[0]["Totalizer"].Should().Be("4.40");
+            journal[0]["CIDiscounted2"].Should().Be("4.40");
+            journal[0]["PICash"].Should().Be("4.40");
+            lines[0]["Amount"].Should().Be("4.40");
+            lines[0]["AmountHT"].Should().Be("4.00");
+            lines[0]["VATAmount"].Should().Be("0.40");
+            lines[0]["UnitPriceHT"].Should().Be("2.00");
+            lines[0]["PricesIncludeVAT"].Should().Be("true");
+            lines[0]["VATNature"].Should().Be("00");
+            vat.Should().ContainSingle();
+            vat[0]["VATRate"].Should().Be("10");
+            vat[0]["AmountHT"].Should().Be("4.00");
+            vat[0]["AmountTTC"].Should().Be("4.40");
+        }
+
+        [Fact]
+        public async Task ClosingJournal_ReadsThePeriodAndPerpetualTotals()
+        {
+            var state = "{\"FR\":{\"Totals\":{\"Totalizer\":10,\"PICash\":10,\"Perpetual\":{\"Totalizer\":250,\"PICash\":200,\"PINonCash\":50}}}}";
+            var z1 = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, Request(0x4652_2000_0000_2011), Response("ft1#Z1", "z1", stateData: state))!;
+
+            var rows = Rows(await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x00D)!), z1));
+
+            rows[0]["Totalizer"].Should().Be("10");
+            rows[0]["PerpetualTotalizer"].Should().Be("250");
+            rows[0]["PerpetualPINonCash"].Should().Be("50");
+            rows[0]["PerpetualCINormal"].Should().BeEmpty("a value the queue did not store stays empty");
+        }
+
+        [Fact]
+        public async Task ClosingJournals_ReadTheClosingPeriod()
+        {
+            var state = "{\"FR\":{\"Closing\":{\"ClosingType\":\"daily\",\"PeriodStart\":\"2026-11-01T22:00:00.1230000Z\",\"PeriodEnd\":\"2026-11-02T22:00:00.4560000Z\"},\"Totals\":{\"Totalizer\":10}}}";
+            var z1 = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, Request(0x4652_2000_0000_2011), Response("ft1#Z1", "z1", stateData: state))!;
+            var e1 = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 2, Request(0x4652_2000_0000_2000), Response("ft2#E1", "e1", stateData: "{\"FR\":{\"Closing\":{\"ClosingType\":\"zero\"}}}"))!;
+
+            var daily = Rows(await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x00D)!), z1));
+            var technical = Rows(await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x004)!), e1));
+
+            daily[0]["ClosingType"].Should().Be("daily");
+            daily[0]["PeriodStart"].Should().Be("2026-11-01T22:00:00.1230000Z");
+            daily[0]["PeriodEnd"].Should().Be("2026-11-02T22:00:00.4560000Z");
+            technical[0]["ClosingType"].Should().Be("zero");
+            technical[0]["PeriodStart"].Should().BeEmpty("a zero receipt closes no period");
+        }
+
+        [Fact]
+        public async Task ClosingJournals_ReadThePeriodStartFromField20WhenSigned()
+        {
+            // archive-v2 §5, market-fr#221: a monthly closing signs the day and the month it closes, shortest first.
+            var id = Guid.NewGuid();
+            var field20 = "Day,2026-11-29T22:00:00.0000000Z;Month,2026-10-31T22:00:00.0000000Z";
+            var dataSet = $"12345678901234||||||{QueueId}|{id}||cashbox-fr|ft1#M1|2026-11-30T22:00:00.0000000Z|4652200000002012||0|EUR|0.00|||{field20}||SERIAL-1|1|N|";
+            var state = "{\"FR\":{\"Closing\":{\"ClosingType\":\"monthly\",\"PeriodStart\":\"2026-10-01T00:00:00.0000000Z\",\"PeriodEnd\":\"2026-11-30T22:00:00.0000000Z\"}}}";
+            var m1 = ArchiveEntry.Read(id, QueueId, 1, Request(0x4652_2000_0000_2012), Response("ft1#M1", dataSet + ".sig", stateData: state))!;
+            var unsigned = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 2, Request(0x4652_2000_0000_2012), Response("ft1#M2", "m2", stateData: state))!;
+
+            var monthly = Rows(await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x00E)!), m1, unsigned));
+
+            m1.SignedPeriodStart.Should().Be(new DateTime(2026, 10, 31, 22, 0, 0, DateTimeKind.Utc));
+            monthly[0]["PeriodStart"].Should().Be("2026-10-31T22:00:00.0000000Z", "the signed start of the month wins over the stored one");
+            monthly[1]["PeriodStart"].Should().Be("2026-10-01T00:00:00.0000000Z", "without a signed field 20, the stored start");
+        }
+
+        [Fact]
+        public async Task SignaturesAndJet_HaveOneRowPerItemAndPerJetEvent()
+        {
+            var jetRequest = "{\"ftReceiptCase\":" + 0x4652_2000_0000_3001L + ",\"cbUser\":\"op1\",\"ftReceiptCaseData\":{\"fr\":{\"code\":50,\"Message\":\"Clôture\",\"Information\":\"jour\"}}}";
+            var l1 = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, jetRequest, Response("ft1#L1", "l1"))!;
+            var t1 = Entry("ft2#T1", "h.p.t1", 2);
+
+            var signatures = Rows(await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.SignaturesFileName), l1, t1));
+            var jet = Rows(await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.JetFileName), l1, t1));
+
+            var itemsPerResponse = Response("ft1#L1", "l1").Split(new[] { "\"ftSignatureType\"" }, StringSplitOptions.None).Length - 1;
+            signatures.Should().HaveCount(2 * itemsPerResponse, "one row per signature item of each response");
+            signatures[0]["Index"].Should().Be("0");
+            signatures[0]["Data"].Should().EndWith("l1");
+            jet.Should().ContainSingle("only the 0x3001 event on L is a JET row");
+            jet[0]["EventCode"].Should().Be("50");
+            jet[0]["EventLabel"].Should().Be("Clôture");
+            jet[0]["Information"].Should().Be("jour");
+            jet[0]["OperatorID"].Should().Be("op1");
+        }
+
+        [Fact]
+        public async Task ComplianceParameters_AreWrittenAsGiven()
+        {
+            var context = new ArchiveV2Context { ComplianceParameters = new[] { new ComplianceParameter("SCU", "Siret", "12345678901234"), new ComplianceParameter("SCU", "Rcs", null) } };
+
+            var csv = await Write(ArchiveV2Files.Files(context).Single(f => f.FileName == ArchiveV2Files.ComplianceParametersFileName));
+
+            csv.Should().Be("Component;Parameter;Value\r\nSCU;Siret;12345678901234\r\nSCU;Rcs;\r\n");
+        }
+
+        [Fact]
+        public void Readme_DescribesEveryFileAndColumnInFrench_InShortLines()
+        {
+            var files = ArchiveV2Files.Files();
+            var readme = files.OfType<ArchiveReadmeFile>().Single().Build();
+            var lines = readme.Split(new[] { "\r\n" }, StringSplitOptions.None);
+
+            readme.Should().StartWith("README - Archive fiscale fiskaltrust").And.Contain("Sommaire").And.Contain("== 6. Contrôle d'intégrité ==");
+            lines.Where(l => l.Length > 100).Should().BeEmpty("the README is read in a plain text viewer");
+            foreach (var file in files.OfType<IDocumentedFile>())
+            {
+                readme.Should().Contain($" {file.FileName} ==");
+                foreach (var (name, description) in file.ColumnDocs)
+                {
+                    description.Should().NotBeNullOrWhiteSpace($"{file.FileName}:{name} needs a description");
+                    readme.Should().Contain($"  {name} : ");
+                }
+            }
+            readme.Should().NotContain("journal-types.csv");
+        }
+
+        private static List<Dictionary<string, string>> Rows(string csv)
+        {
+            var lines = csv.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            var header = lines[0].Split(';');
+            return lines.Skip(1)
+                .Select(SplitCsv)
+                .Select(cells => header.Select((h, i) => (h, v: i < cells.Count ? cells[i] : "")).ToDictionary(x => x.h, x => x.v))
+                .ToList();
+        }
+
+        private static List<string> SplitCsv(string line)
+        {
+            var cells = new List<string>();
+            var current = new StringBuilder();
+            var quoted = false;
+            for (var i = 0; i < line.Length; i++)
+            {
+                var c = line[i];
+                if (quoted)
+                {
+                    if (c == '"' && i + 1 < line.Length && line[i + 1] == '"')
+                    {
+                        current.Append('"');
+                        i++;
+                    }
+                    else if (c == '"')
+                    {
+                        quoted = false;
+                    }
+                    else
+                    {
+                        current.Append(c);
+                    }
+                }
+                else if (c == '"')
+                {
+                    quoted = true;
+                }
+                else if (c == ';')
+                {
+                    cells.Add(current.ToString());
+                    current.Clear();
+                }
+                else
+                {
+                    current.Append(c);
+                }
+            }
+            cells.Add(current.ToString());
+            return cells;
         }
     }
 }

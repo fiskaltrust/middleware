@@ -23,14 +23,26 @@ public class DailyOperationsCommandProcessorFR : IDailyOperationsCommandProcesso
 
     public Task<ProcessCommandResponse> OneReceipt0x2001Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
 
-    public Task<ProcessCommandResponse> ShiftClosing0x2010Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
+    public Task<ProcessCommandResponse> ShiftClosing0x2010Async(ProcessCommandRequest request) => ClosingAsync(request, "Shift-Closing receipt was processed.");
 
-    public Task<ProcessCommandResponse> DailyClosing0x2011Async(ProcessCommandRequest request)
-        => _pipeline.SignAsync(request, [ftActionJournalFactory.CreateDailyClosingActionJournal(request.queue, request.ReceiptRequest, request.ReceiptResponse)]);
+    public Task<ProcessCommandResponse> DailyClosing0x2011Async(ProcessCommandRequest request) => ClosingAsync(request, "Daily-Closing receipt was processed.");
 
-    public Task<ProcessCommandResponse> MonthlyClosing0x2012Async(ProcessCommandRequest request)
-        => _pipeline.SignAsync(request, [ftActionJournalFactory.CreateMonthlyClosingActionJournal(request.queue, request.ReceiptRequest, request.ReceiptResponse)]);
+    public Task<ProcessCommandResponse> MonthlyClosing0x2012Async(ProcessCommandRequest request) => ClosingAsync(request, "Monthly-Closing receipt was processed.");
 
-    public Task<ProcessCommandResponse> YearlyClosing0x2013Async(ProcessCommandRequest request)
-        => _pipeline.SignAsync(request, [ftActionJournalFactory.CreateYearlyClosingActionJournal(request.queue, request.ReceiptRequest, request.ReceiptResponse)]);
+    public Task<ProcessCommandResponse> YearlyClosing0x2013Async(ProcessCommandRequest request) => ClosingAsync(request, "Yearly-Closing receipt was processed.");
+
+    /// <summary>
+    /// Signs a closing, then journals it: dated by the closing receipt's moment and naming it, with the period it
+    /// closed and its totals as stored in the response, as v1.2 journalled its grand-total payload. An unsigned closing journals nothing.
+    /// </summary>
+    private async Task<ProcessCommandResponse> ClosingAsync(ProcessCommandRequest request, string message)
+    {
+        var signed = await _pipeline.SignAsync(request).ConfigureAwait(false);
+        if (!FRSigningPipeline.Succeeded(signed))
+        {
+            return signed;
+        }
+
+        return signed with { actionJournals = [ftActionJournalFactory.CreateClosingActionJournal(request.ReceiptRequest, signed.receiptResponse, message), .. signed.actionJournals] };
+    }
 }

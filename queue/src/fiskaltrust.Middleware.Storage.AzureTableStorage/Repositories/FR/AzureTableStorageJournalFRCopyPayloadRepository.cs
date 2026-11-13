@@ -118,7 +118,24 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.FR
             };
         }
 
-        // A receipt reference may hold characters Azure does not allow in a key.
-        private static string PartitionKeyOf(string copiedReceiptReference) => ConversionHelper.ToBase64UrlString(Encoding.UTF8.GetBytes(copiedReceiptReference ?? ""));
+        private const int MaxPartitionKeyLength = 1000;
+
+        /// <summary>
+        /// The partition of a copied reference. A receipt reference may hold characters Azure does not allow in a key, so it is
+        /// Base64Url-encoded; one too long for the 1 KiB key limit of Azure Table Storage is keyed by its SHA-256 instead, prefixed so it
+        /// cannot meet an encoded reference. A reference that fits keeps the key it always had.
+        /// </summary>
+        public static string PartitionKeyOf(string copiedReceiptReference)
+        {
+            var bytes = Encoding.UTF8.GetBytes(copiedReceiptReference ?? "");
+            var key = ConversionHelper.ToBase64UrlString(bytes);
+            if (key.Length <= MaxPartitionKeyLength)
+            {
+                return key;
+            }
+
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            return "sha256_" + ConversionHelper.ToBase64UrlString(sha256.ComputeHash(bytes));
+        }
     }
 }

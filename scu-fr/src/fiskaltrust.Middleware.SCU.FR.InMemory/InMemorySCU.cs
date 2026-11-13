@@ -71,7 +71,10 @@ public class InMemorySCU : IFRSSCD, IDisposable
             // market-fr#235: the reprint number of a copy (R13 ENC-DUP-PRN-NUM); empty on every other receipt.
             FRStateData.CopyNumber(response)?.ToString(CultureInfo.InvariantCulture) ?? "",
             (request.ReceiptRequest.cbChargeItems ?? new List<ChargeItem>()).Sum(x => x.Amount).ToString("0.00", CultureInfo.InvariantCulture),
-            PeriodTotals(request.PeriodTotals),
+            // market-fr#221: fields 20 and 21 as the LNE and self-certified SCUs sign them: the archive boundaries,
+            // the migration event or the closed periods by receipt case, then the period and perpetual totals.
+            FRSignedRecords.Field20(request.ReceiptRequest, response),
+            FRSignedRecords.Field21(request.PeriodTotals),
             _certificateSerialNumber,
             request.ChainCounter.ToString(CultureInfo.InvariantCulture),
             FRChaining.Flag(previousSignature).ToCode(),
@@ -86,11 +89,6 @@ public class InMemorySCU : IFRSSCD, IDisposable
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
-
-    /// <summary>The accumulated totals a closing attests, folded into the signed data set.</summary>
-    private static string PeriodTotals(FRPeriodTotals? periodTotals) => periodTotals is null
-        ? ""
-        : $"{periodTotals.Period}:{periodTotals.Current.Totalizer.ToString("0.00", CultureInfo.InvariantCulture)}:{periodTotals.Perpetual.Totalizer.ToString("0.00", CultureInfo.InvariantCulture)}";
 
     /// <summary>A self-signed certificate over the ephemeral key, so a test archive verifies.</summary>
     public Task<FRSigningCertificate> GetSigningCertificateAsync()

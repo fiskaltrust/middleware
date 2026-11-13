@@ -3,8 +3,8 @@ using System;
 namespace fiskaltrust.Middleware.Journal.FR.Archive.Model
 {
     /// <summary>
-    /// The version of a sub-archive's layout: which files it holds and which columns they have.
-    /// A half migration switches a queue from one format version to the next, and the main archive then
+    /// The version of an archive file's layout: which files it holds and which columns they have.
+    /// A half migration switches a queue from one format version to the next, and the archive ends there:
     /// holds one sub-archive per format version (ADR 0005).
     /// </summary>
     public sealed class ArchiveFormatVersion : IEquatable<ArchiveFormatVersion>

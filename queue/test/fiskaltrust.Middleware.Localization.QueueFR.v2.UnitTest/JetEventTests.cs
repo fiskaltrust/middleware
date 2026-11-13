@@ -22,7 +22,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 
 /// <summary>
 /// Technical events of the NF525 JET (Infocert R19 v4.2), market-fr#200, seen from the queue: the
-/// SCU decides whether an event can be signed, the queue only acts on its response.
+/// queue refuses a malformed event before any SCU sees it (one behaviour for every body), and acts
+/// on the SCU's response otherwise.
 /// </summary>
 public class JetEventTests
 {
@@ -74,7 +75,7 @@ public class JetEventTests
         sscd.FailWith = "The technical event cannot enter the NF525 technical event journal: no code";
         sscd.FailState = SCU.FR.Abstraction.Cases.StateFR.Error;
 
-        var refused = await sut.ProtocolTechnicalEvent0x3001Async(TechnicalEvent(null));
+        var refused = await sut.ProtocolTechnicalEvent0x3001Async(TechnicalEvent(Json("{\"FR\":{\"Code\":\"90\",\"Message\":\"Archivage\"}}")));
 
         refused.receiptResponse.ftState.Should().Be((State) StateFR.Error);
         refused.receiptResponse.ftSignatures.Should().ContainSingle(x => x.Caption == "FAILURE")
@@ -83,5 +84,84 @@ public class JetEventTests
         sscd.FailWith = null;
         var next = await sut.ProtocolTechnicalEvent0x3001Async(TechnicalEvent(Json("{\"FR\":{\"Code\":\"90\",\"Message\":\"Archivage\"}}")));
         next.receiptResponse.ftReceiptIdentification.Should().Be("ft1#L1", "the refused event consumed no number of chain L");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("{\"FR\":{\"Code\":\"11\",\"Message\":\"x\"}}")]
+    [InlineData("{\"FR\":{\"Code\":\"90\"}}")]
+    public async Task MalformedTechnicalEvent_IsRefusedByTheQueue_BeforeAnyScu(string? caseData)
+    {
+        var (sut, sscd) = CreateSut();
+
+        var refused = await sut.ProtocolTechnicalEvent0x3001Async(TechnicalEvent(caseData is null ? null : Json(caseData)));
+
+        refused.receiptResponse.ftState.Should().Be((State) StateFR.Error);
+        sscd.Calls.Should().BeEmpty("the LNE and self-certified SCUs must refuse the same events as InfoCert");
+        refused.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
+    }
+
+    private static ProcessCommandRequest AccountingEvent(int code)
+    {
+        var request = TechnicalEvent(Json($"{{\"FR\":{{\"Code\":\"{code}\",\"Message\":\"Événement\"}}}}"));
+        request.ReceiptRequest.ftReceiptCase = ReceiptCase.ProtocolAccountingEvent0x3002.WithCountry("FR");
+        return request;
+    }
+
+    /// <summary>ADR 0021: 0x3002 (Protocol, audit / accounting event) accepts R19 160, 180 or an editor code from 900 up.</summary>
+    [Theory]
+    [InlineData(160)]
+    [InlineData(180)]
+    [InlineData(900)]
+    public async Task AccountingEvent_WithAnAccountingCode_IsSignedIntoTheLogChain(int code)
+    {
+        var (sut, sscd) = CreateSut();
+
+        var response = await sut.ProtocolAccountingEvent0x3002Async(AccountingEvent(code));
+
+        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#L1");
+        sscd.Calls.Should().ContainSingle();
+    }
+
+    [Theory]
+    [InlineData(20)]
+    [InlineData(260)]
+    [InlineData(11)]
+    public async Task AccountingEvent_WithAnyOtherCode_IsRefusedByTheQueue_BeforeAnyScu(int code)
+    {
+        var (sut, sscd) = CreateSut();
+
+        var refused = await sut.ProtocolAccountingEvent0x3002Async(AccountingEvent(code));
+
+        refused.receiptResponse.ftState.Should().Be((State) StateFR.Error);
+        sscd.Calls.Should().BeEmpty("every SCU refuses the same accounting events");
+        refused.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
+    }
+
+    [Fact]
+    public async Task AccountingEvent_WithoutEvent_IsRefusedByTheQueue()
+    {
+        var (sut, sscd) = CreateSut();
+        var request = TechnicalEvent(null);
+        request.ReceiptRequest.ftReceiptCase = ReceiptCase.ProtocolAccountingEvent0x3002.WithCountry("FR");
+
+        var refused = await sut.ProtocolAccountingEvent0x3002Async(request);
+
+        refused.receiptResponse.ftState.Should().Be((State) StateFR.Error);
+        sscd.Calls.Should().BeEmpty();
+    }
+
+    /// <summary>ADR 0021: a training 0x3001 is signed as an R19 JET string on chain X, so its event is checked too.</summary>
+    [Fact]
+    public async Task MalformedTrainingTechnicalEvent_IsRefusedByTheQueue()
+    {
+        var (sut, sscd) = CreateSut();
+        var request = TechnicalEvent(null);
+        request.ReceiptRequest.ftReceiptCase = request.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+
+        var refused = await sut.ProtocolTechnicalEvent0x3001Async(request);
+
+        refused.receiptResponse.ftState.Should().Be((State) StateFR.Error);
+        sscd.Calls.Should().BeEmpty();
     }
 }

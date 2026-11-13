@@ -62,6 +62,9 @@ class CashBoxBuilderFR : ICashBoxBuilder
             _ => throw new NotImplementedException("SCU Type not implemented")
         };
 
+        // The test launcher is a local run: the queue accepts the in-memory SCU only with this key (market-fr#221).
+        queueConfiguration.Configuration[Localization.QueueFR.v2.Logic.FRInMemoryScuGuard.LocalDevelopmentKey] = true;
+
         return new Localization.QueueFR.v2.QueueFRBootstrapper(
             queueId,
             loggerFactory,

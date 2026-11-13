@@ -35,6 +35,10 @@ public class V1HandoverTests
         GLastDayMoment = LastDailyClosing,
         GMonthTotalizer = 300.00m,
         GYearTotalizer = 900.00m,
+        // The v1.2 archive receipt that has to precede the migration (ADR 0003 amendment 2026-11-11).
+        ANumerator = 3,
+        ALastQueueItemId = Guid.NewGuid(),
+        ALastMoment = LastDailyClosing.AddMinutes(5),
     };
 
     private static ProcessCommandRequest CommandRequest(ReceiptCase receiptCase)
@@ -137,6 +141,32 @@ public class V1HandoverTests
 
         FRV1Handover.Apply(queueFR, LastSaleOfTheDay).Should().Contain("never had a daily closing");
         FRV1Handover.Apply(queueFR, lastV1DayEntryMoment: null).Should().BeNull("a v1 queue that issued nothing has no open day");
+    }
+
+    [Fact]
+    public void Apply_WithoutAV12ArchiveReceipt_IsRefusedAndChangesNothing()
+    {
+        var queueFR = V1QueueAtTheCut();
+        queueFR.ALastQueueItemId = null;
+        queueFR.ANumerator = 0;
+
+        var refusal = FRV1Handover.Apply(queueFR, LastSaleOfTheDay);
+
+        refusal.Should().Contain("archive receipt (0x3011)");
+        queueFR.GYearTotalizer.Should().Be(900.00m);
+    }
+
+    [Fact]
+    public void Apply_WhileV1MessagesArePending_IsRefusedAndChangesNothing()
+    {
+        var queueFR = V1QueueAtTheCut();
+        queueFR.MessageCount = 2;
+        queueFR.MessageMoment = LastDailyClosing.AddMinutes(-30);
+
+        var refusal = FRV1Handover.Apply(queueFR, LastSaleOfTheDay);
+
+        refusal.Should().Contain("2 pending message").And.Contain("zero receipt (0x2000)");
+        queueFR.GYearTotalizer.Should().Be(900.00m);
     }
 
     [Fact]

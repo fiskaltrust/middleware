@@ -37,6 +37,7 @@ public class FRJournalExportTests : IDisposable
     {
         var configuration = new Dictionary<string, object>
         {
+            { "FRLocalDevelopment", true },
             { "cashboxid", _cashBoxId },
             { "init_ftCashBox", JsonSerializer.Serialize(new ftCashBox { ftCashBoxId = _cashBoxId, TimeStamp = DateTime.UtcNow.Ticks }) },
             { "init_ftQueue", JsonSerializer.Serialize(new List<ftQueue> { new() { ftQueueId = _queueId, ftCashBoxId = _cashBoxId, StartMoment = DateTime.UtcNow, CountryCode = "FR" } }) },
@@ -109,12 +110,136 @@ public class FRJournalExportTests : IDisposable
         status.Should().Contain(Siret).And.Contain("\"Code\":\"00A\"");
     }
 
+    /// <summary>
+    /// The archive receipts are chain A, journal 008 (market-fr#221, 2026-11-09), so the archive
+    /// export keeps them in a journal of their own instead of dropping them.
+    /// </summary>
     [Fact]
-    public async Task RetiredArchiveGroup008_IsAnUnknownJournalType()
+    public async Task ArchiveJournal_HoldsTheArchiveReceipts_ChainedOnThePreviousOne()
     {
-        var act = () => ReadAsync(_journal, (JournalTypeFR) 0x4652_2000_0000_0008);
+        var from = DateTime.UtcNow.AddMinutes(-1);
+        await SignAsync(CashSale());
+        var first = await SignAsync(Request((ReceiptCase) 0x3011));
+        var second = await SignAsync(Request((ReceiptCase) 0x3011));
 
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*is unknown*");
+        var rows = Rows(await ReadAsync(_journal, JournalTypeFR.Archive));
+
+        rows.Should().HaveCount(2);
+        rows[0]["ftReceiptIdentification"].Should().Be(first.ftReceiptIdentification);
+        rows[1]["ftReceiptIdentification"].Should().Be(second.ftReceiptIdentification);
+        rows[1]["PreviousSignature"].Should().Be(ChainedSignature(first));
+
+        var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
+        using var zip = new ZipArchive(new MemoryStream(bytes));
+        zip.Entries.Should().Contain(e => e.Name == "journal-A-archive.csv");
+    }
+
+    /// <summary>The archive receipt's row carries the boundaries it signed (contract §1.4), never closing totals.</summary>
+    [Fact]
+    public async Task ArchiveJournal_CarriesTheSignedBoundaries()
+    {
+        var firstSale = await SignAsync(CashSale());
+        var first = await SignAsync(Request((ReceiptCase) 0x3011));
+        var secondSale = await SignAsync(CashSale());
+        var second = await SignAsync(Request((ReceiptCase) 0x3011));
+
+        var rows = Rows(await ReadAsync(_journal, JournalTypeFR.Archive));
+
+        rows.Should().HaveCount(2);
+        rows[0]["PreviousArchiveQueueItemID"].Should().BeEmpty("the queue's first archive receipt has no previous one");
+        rows[0]["FirstContainedReceiptQueueItemID"].Should().Be(firstSale.ftQueueItemID.ToString("D"));
+        rows[0]["FirstContainedReceiptMoment"].Should().Be(firstSale.ftReceiptMoment.ToUniversalTime().ToString("o"));
+        rows[1]["PreviousArchiveQueueItemID"].Should().Be(first.ftQueueItemID.ToString("D"));
+        rows[1]["FirstContainedReceiptQueueItemID"].Should().Be(secondSale.ftQueueItemID.ToString("D"));
+        rows[1]["LastContainedReceiptQueueItemID"].Should().Be(second.ftQueueItemID.ToString("D"), "the archive receipt is its own last contained receipt");
+        rows[1]["LastContainedReceiptMoment"].Should().Be(second.ftReceiptMoment.ToUniversalTime().ToString("o"));
+        rows[1]["LastReceiptJournalID"].Should().NotBeEmpty();
+        rows[1]["LastJournalFRID"].Should().BeEmpty();
+        rows[1]["ATotalizer"].Should().Be("12.00", "the archive period of the second receipt holds one 12.00 sale");
+        rows[1].Keys.Should().NotContain(new[] { "Totalizer", "CINormal", "PerpetualTotalizer" });
+    }
+
+    /// <summary>
+    /// An archive ends on its own archive receipt (decided 2026-11-10), and chain A gets a chain anchor
+    /// like every other chain: its first A receipt and the previous A receipt's signature, which the
+    /// previous archive holds (contract section 10, market-fr#221).
+    /// </summary>
+    [Fact]
+    public async Task ArchiveExport_AnchorsChainAOnThePreviousArchiveReceipt()
+    {
+        await SignAsync(CashSale());
+        var first = await SignAsync(Request((ReceiptCase) 0x3011));
+        var from = DateTime.UtcNow;
+        await SignAsync(CashSale());
+        var second = await SignAsync(Request((ReceiptCase) 0x3011));
+
+        var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
+
+        using var zip = new ZipArchive(new MemoryStream(bytes));
+        using var manifest = JsonDocument.Parse(ReadEntry(zip, ArchivePackager<object>.ManifestFileName));
+        var anchor = manifest.RootElement.GetProperty("chainAnchors").EnumerateArray().Single(a => a.GetProperty("chain").GetString() == "A");
+        anchor.GetProperty("firstReceiptIdentification").GetString().Should().Be(second.ftReceiptIdentification);
+        anchor.GetProperty("previousSignature").GetString().Should().Be(ChainedSignature(first));
+    }
+
+    [Fact]
+    public async Task ArchiveReceipt_AsTheQueuesFirstReceipt_IsRefused()
+    {
+        var response = JsonSerializer.Deserialize<ReceiptResponse>(await _signProcessor(JsonSerializer.Serialize(Request((ReceiptCase) 0x3011))))!;
+
+        response.ftState.IsState(State.Error).Should().BeTrue("as v1, the first receipt of a queue has nothing to archive");
+        response.ftReceiptIdentification.Should().NotContain("A1");
+    }
+
+    /// <summary>
+    /// As v1.2, an archive receipt signs which receipts its archive holds, the last journals, the day,
+    /// month and year totals and the previous archive receipt; the archive's bytes are not hashed
+    /// (market-fr#221). Unlike v1.2, the range runs from the record after the previous archive receipt
+    /// up to and including the archive receipt itself, so every record lies in exactly one range
+    /// (decided 2026-11-10).
+    /// </summary>
+    [Fact]
+    public async Task ArchiveReceipt_SignsTheBoundariesOfTheArchiveItCloses()
+    {
+        var firstSale = await SignAsync(CashSale());
+        var first = await SignAsync(Request((ReceiptCase) 0x3011));
+        var secondSale = await SignAsync(CashSale());
+        var second = await SignAsync(Request((ReceiptCase) 0x3011));
+
+        var firstBoundaries = SCU.FR.Abstraction.Helpers.FRStateData.Archive(first)!;
+        firstBoundaries.PreviousArchiveQueueItemId.Should().BeNull("it is the queue's first archive receipt");
+        firstBoundaries.FirstContainedReceiptQueueItemId.Should().Be(firstSale.ftQueueItemID);
+        firstBoundaries.FirstContainedReceiptMoment.Should().Be(firstSale.ftReceiptMoment);
+        firstBoundaries.LastContainedReceiptQueueItemId.Should().Be(first.ftQueueItemID, "the archive receipt is its own last contained receipt");
+        firstBoundaries.LastContainedReceiptMoment.Should().Be(first.ftReceiptMoment);
+        firstBoundaries.LastReceiptJournalId.Should().NotBeNull();
+        firstBoundaries.Day.Totalizer.Should().Be(12.00m);
+
+        var secondBoundaries = SCU.FR.Abstraction.Helpers.FRStateData.Archive(second)!;
+        secondBoundaries.PreviousArchiveQueueItemId.Should().Be(first.ftQueueItemID);
+        secondBoundaries.FirstContainedReceiptQueueItemId.Should().Be(secondSale.ftQueueItemID, "the range starts on the record after the previous archive receipt");
+        secondBoundaries.FirstContainedReceiptMoment.Should().Be(secondSale.ftReceiptMoment);
+        secondBoundaries.LastContainedReceiptQueueItemId.Should().Be(second.ftQueueItemID);
+        secondBoundaries.LastContainedReceiptMoment.Should().Be(second.ftReceiptMoment);
+        secondBoundaries.Day.Totalizer.Should().Be(12.00m, "the first archive receipt closed the day");
+        secondBoundaries.Year.Totalizer.Should().Be(24.00m);
+
+        var signedContent = SCU.FR.Abstraction.Helpers.FRReceiptQrCode.SignedContentOf(second.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data);
+        signedContent.Should().Contain(first.ftQueueItemID.ToString("D"), "the SCU signs the link to the previous archive receipt");
+    }
+
+    [Fact]
+    public async Task TrainingArchiveReceipt_SignsNoBoundaries()
+    {
+        await SignAsync(CashSale());
+        var request = Request((ReceiptCase) 0x3011);
+        request.ftReceiptCase = request.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+        request.ftReceiptCaseData = new { FR = new { ManagerId = "manager-1" } };
+
+        var training = await SignAsync(request);
+
+        SCU.FR.Abstraction.Helpers.FRStateData.Archive(training).Should().BeNull();
+        training.ftSignatures.Should().Contain(x => x.ftSignatureType.IsType(SignatureTypeFR.DayTotals), "a training archive receipt prints the live day totals, as v1.2");
     }
 
     [Fact]
@@ -127,16 +252,52 @@ public class FRJournalExportTests : IDisposable
 
         ArchiveVerifier.Verify(new MemoryStream(bytes)).Errors.Should().BeEmpty();
         using var zip = new ZipArchive(new MemoryStream(bytes));
-        var subArchive = zip.Entries.Should().ContainSingle(e => e.Name.StartsWith("subarchive_")).Subject;
-        using var sub = new ZipArchive(subArchive.Open());
-        using var reader = new StreamReader(sub.GetEntry("journal-T.csv")!.Open());
-        (await reader.ReadToEndAsync()).Should().Contain(sale.ftReceiptIdentification);
-        sub.Entries.Select(e => e.Name).Should().Contain(new[] { "charge-items.csv", "pay-items.csv", "journal-types.csv", "case-data.csv" });
+        var sub = zip;
+        var tickets = ReadCsv(sub, "journal-T-ticket.csv");
+        tickets.Should().ContainSingle(r => r["ftReceiptIdentification"] == sale.ftReceiptIdentification);
+        var ticket = tickets.Single(r => r["ftReceiptIdentification"] == sale.ftReceiptIdentification);
+        ticket["Totalizer"].Should().NotBeEmpty("the queue stores the receipt totals when it signs (market-fr#221)");
+        ticket["SoftwareVersion"].Should().NotBeEmpty("the queue item records the version that processed it");
+        ReadCsv(sub, "charge-items.csv").Should().OnlyContain(r => r["AmountHT"] != "" && r["VATAmount"] != "" && r["PricesIncludeVAT"] == "true");
+        ReadCsv(sub, "compliance-parameters.csv").Should().Contain(r => r["Component"] == "Queue" && r["Parameter"] == "ftQueueID");
+        ReadCsv(sub, "compliance-parameters.csv").Should().ContainSingle(r => r["Component"] == "Queue" && r["Parameter"] == "ValidationLevel", "it is written even when not configured (market-fr#221)");
+        sub.Entries.Select(e => e.Name).Should().Contain(new[] { "charge-items.csv", "pay-items.csv", "receipt-vat-summary.csv", "signatures.csv", "jet.csv", "case-data.csv", "compliance-parameters.csv", "README.txt" })
+            .And.NotContain("journal-types.csv");
 
         using var archiveCertificate = new X509Certificate2(ReadEntry(zip, ArchivePackager<object>.ArchiveCertificateFileName));
         using var scuKey = new X509Certificate2(Convert.FromBase64String((await _scu.GetSigningCertificateAsync()).CertificateBase64)).GetECDsaPublicKey()!;
         archiveCertificate.GetECDsaPublicKey()!.ExportSubjectPublicKeyInfo().Should().Equal(scuKey.ExportSubjectPublicKeyInfo(), "the queue's SCU signs a locally exported archive (ADR 0007 amendment)");
-        sub.Entries.Should().Contain(e => e.Name == "scu_INMEMORY_0001_v2_1.cer", "the SCU certificate also checks the entries it signed");
+        zip.Entries.Should().NotContain(e => e.Name.StartsWith("scu_") || e.Name.StartsWith("subarchive_"), "archive-certificate.cer is the file's own SCU certificate (ADR 0019)");
+    }
+
+    /// <summary>
+    /// Contract §12: the rows in their order, the SCU package before its keys, no runtime state; §1.1 and §12:
+    /// SoftwareVersion as major.minor.patch (#124).
+    /// </summary>
+    [Fact]
+    public async Task ArchiveExport_WritesTheComplianceParametersOfTheContract()
+    {
+        var from = DateTime.UtcNow.AddMinutes(-1);
+        var sale = await SignAsync(CashSale());
+
+        var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
+
+        using var zip = new ZipArchive(new MemoryStream(bytes));
+        var parameters = ReadCsv(zip, "compliance-parameters.csv");
+        var middleware = parameters.Single(r => r["Component"] == "Middleware");
+        middleware["Parameter"].Should().Be("SoftwareVersion");
+        middleware["Value"].Should().MatchRegex(@"^[0-9]+\.[0-9]+\.[0-9]+$");
+        parameters.Where(r => r["Component"] == "Queue").Select(r => r["Parameter"]).Should()
+            .Equal("ftQueueID", "CountryCode", "ftCashBoxIdentification", "Siret", "Sandbox", "ValidationLevel");
+        parameters.Single(r => r["Parameter"] == "Sandbox")["Value"].Should().Be("false");
+        var scu = parameters.Where(r => r["Component"] == "SCU").ToList();
+        scu[0]["Parameter"].Should().Be("Package");
+        scu[0]["Value"].Should().Be("InMemory");
+        scu.Select(r => r["Parameter"]).Should().Contain("CertificateSerialNumber")
+            .And.NotContain(new[] { "Description", "Version", "CertificationBody", "SignatureCreationDataAvailable" }, "the SCU rows are its configuration, not its runtime state");
+
+        var ticket = ReadCsv(zip, "journal-T-ticket.csv").Single(r => r["ftReceiptIdentification"] == sale.ftReceiptIdentification);
+        ticket["SoftwareVersion"].Should().Be(middleware["Value"]);
     }
 
     [Fact]
@@ -150,19 +311,84 @@ public class FRJournalExportTests : IDisposable
         var repository = await _storageProvider.CreateMiddlewareQueueItemRepository();
         var stored = (await repository.GetAsync()).Single(q => q.ftQueueItemId == sale.ftQueueItemID);
         using var zip = new ZipArchive(new MemoryStream(bytes));
-        using var sub = new ZipArchive(zip.Entries.Single(e => e.Name.StartsWith("subarchive_")).Open());
-        var lines = Encoding.UTF8.GetString(ReadEntry(sub, "requests.jsonl")).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var lines = Encoding.UTF8.GetString(ReadEntry(zip, "requests.jsonl")).Split('\n', StringSplitOptions.RemoveEmptyEntries);
         using var line = JsonDocument.Parse(lines.Single());
         line.RootElement.GetProperty("ftQueueItemID").GetString().Should().Be(sale.ftQueueItemID.ToString("D"));
         line.RootElement.GetProperty("request").GetString().Should().Be(stored.request, "a verifier recomputes the request hash from the stored bytes (archive-v2 section 9)");
     }
 
+    /// <summary>One standalone file under one certificate with one manifest kind (ADR 0019, contract section 10.2).</summary>
     [Fact]
-    public async Task ArchiveExport_OverTwoFiscalYears_IsRefused()
+    public async Task ArchiveExport_IsOneStandaloneFile_WithTheFileManifest()
     {
+        var from = DateTime.UtcNow.AddMinutes(-1);
+        var first = await SignAsync(CashSale());
+        var last = await SignAsync(CashSale());
+        var to = DateTime.UtcNow.AddMinutes(1);
+
+        var (contentType, reader) = await _journal(JsonSerializer.Serialize(new JournalRequest { ftJournalType = JournalTypeFR.ArchiveExport.As<JournalType>(), From = from.Ticks, To = to.Ticks }));
+        using var buffer = new MemoryStream();
+        await reader.CopyToAsync(buffer);
+
+        contentType.Name.Should().MatchRegex("^archive_INMEMORY-0001_[0-9]{8}T[0-9]{6}[0-9]{7}Z_[0-9]{8}T[0-9]{6}[0-9]{7}Z\\.zip$");
+        using var zip = new ZipArchive(new MemoryStream(buffer.ToArray()));
+        zip.Entries.Should().NotContain(e => e.Name.EndsWith(".zip"), "there is no main archive and no sub-archive");
+        using var manifest = JsonDocument.Parse(ReadEntry(zip, ArchivePackager<object>.ManifestFileName));
+        var root = manifest.RootElement;
+        root.TryGetProperty("kind", out _).Should().BeFalse();
+        root.TryGetProperty("subArchives", out _).Should().BeFalse();
+        root.TryGetProperty("run", out _).Should().BeFalse();
+        root.GetProperty("certificateSerialNumber").GetString().Should().Be("INMEMORY-0001");
+        root.GetProperty("formatVersion").GetString().Should().Be("2");
+        root.GetProperty("schema").GetString().Should().Be("LNE");
+        root.GetProperty("part").GetInt32().Should().Be(1);
+        root.GetProperty("partCount").GetInt32().Should().Be(1);
+        root.GetProperty("closedBy").GetString().Should().Be("periodEnd");
+        root.GetProperty("requestStart").GetDateTime().Should().Be(from.ToUniversalTime());
+        root.GetProperty("requestEnd").GetDateTime().Should().Be(to.ToUniversalTime().AddTicks(1));
+        root.GetProperty("periodStart").GetDateTime().Should().Be(from.ToUniversalTime(), "a request of a year or less states exactly from and to");
+        root.GetProperty("periodEnd").GetDateTime().Should().Be(to.ToUniversalTime().AddTicks(1));
+        root.GetProperty("recordCount").GetInt32().Should().Be(2);
+        root.GetProperty("firstRecord").GetProperty("ftQueueItemID").GetString().Should().Be(first.ftQueueItemID.ToString("D"));
+        root.GetProperty("firstRecord").GetProperty("ftReceiptIdentification").GetString().Should().Be(first.ftReceiptIdentification);
+        root.GetProperty("firstRecord").GetProperty("ftReceiptMoment").GetDateTime().Should().Be(first.ftReceiptMoment.ToUniversalTime());
+        root.GetProperty("lastRecord").GetProperty("ftQueueItemID").GetString().Should().Be(last.ftQueueItemID.ToString("D"));
+        root.GetProperty("chainAnchors").EnumerateArray().Should().ContainSingle(a => a.GetProperty("chain").GetString() == "T");
+    }
+
+    [Fact]
+    public async Task ArchiveExport_OfAPeriodWithoutReceipts_IsRefused()
+    {
+        await SignAsync(CashSale());
+
         var act = () => ReadAsync(_journal, JournalTypeFR.ArchiveExport, new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc).Ticks, new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc).Ticks);
 
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*fiscal year*");
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*no receipt*");
+    }
+
+    /// <summary>A request longer than a year whose records lie within one year is one file, sliced on its records (contract section 10.3).</summary>
+    [Fact]
+    public async Task ArchiveExport_OfARequestOverAYear_WithRecordsInOneYear_IsOneFile()
+    {
+        var from = DateTime.UtcNow.AddYears(-3);
+        var sale = await SignAsync(CashSale());
+
+        var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
+
+        using var zip = new ZipArchive(new MemoryStream(bytes));
+        using var manifest = JsonDocument.Parse(ReadEntry(zip, ArchivePackager<object>.ManifestFileName));
+        manifest.RootElement.GetProperty("requestStart").GetDateTime().Should().Be(from.ToUniversalTime());
+        manifest.RootElement.GetProperty("periodStart").GetDateTime().Should().Be(sale.ftReceiptMoment.ToUniversalTime(), "from the request start the slice would exceed a year");
+    }
+
+    [Fact]
+    public async Task Journal_WithToAtTheLargestMoment_IsTheOpenEnd()
+    {
+        var sale = await SignAsync(CashSale());
+
+        var rows = Rows(await ReadAsync(_journal, JournalTypeFR.Ticket, 0, DateTime.MaxValue.Ticks));
+
+        rows.Should().ContainSingle().Which["ftReceiptIdentification"].Should().Be(sale.ftReceiptIdentification);
     }
 
     private async Task<ReceiptResponse> SignAsync(ReceiptRequest request)
@@ -192,10 +418,52 @@ public class FRJournalExportTests : IDisposable
 
     private static List<Dictionary<string, string>> Rows(byte[] csv)
     {
-        // The test data holds no ';' or quote, so a plain split reads the file.
+        // The signed content carries ';' (fields 20 and 21 records), so a field may be quoted (CsvWriter); no field holds a line break.
         var lines = Encoding.UTF8.GetString(csv).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
-        var header = lines[0].Split(';');
-        return lines.Skip(1).Select(l => header.Zip(l.Split(';')).ToDictionary(p => p.First, p => p.Second)).ToList();
+        var header = Fields(lines[0]);
+        return lines.Skip(1).Select(l => header.Zip(Fields(l)).ToDictionary(p => p.First, p => p.Second)).ToList();
+    }
+
+    private static List<string> Fields(string line)
+    {
+        var fields = new List<string>();
+        var field = new StringBuilder();
+        var quoted = false;
+        for (var i = 0; i < line.Length; i++)
+        {
+            var c = line[i];
+            if (quoted)
+            {
+                if (c == '"' && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    field.Append('"');
+                    i++;
+                }
+                else if (c == '"')
+                {
+                    quoted = false;
+                }
+                else
+                {
+                    field.Append(c);
+                }
+            }
+            else if (c == '"')
+            {
+                quoted = true;
+            }
+            else if (c == ';')
+            {
+                fields.Add(field.ToString());
+                field.Clear();
+            }
+            else
+            {
+                field.Append(c);
+            }
+        }
+        fields.Add(field.ToString());
+        return fields;
     }
 
     private static string ChainedSignature(ReceiptResponse response)
@@ -228,5 +496,14 @@ public class FRJournalExportTests : IDisposable
             new PayItem { Amount = 12.00m, Description = "Especes", Currency = Currency.EUR, ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") },
         ];
         return request;
+    }
+
+    private static List<Dictionary<string, string>> ReadCsv(ZipArchive zip, string name)
+    {
+        using var reader = new StreamReader(zip.GetEntry(name)!.Open());
+        var lines = reader.ReadToEnd().Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        var header = lines[0].Split(';');
+        // The rows checked here hold no quoted separator.
+        return lines.Skip(1).Select(l => l.Split(';')).Select(cells => header.Select((h, i) => (h, v: i < cells.Length ? cells[i] : "")).ToDictionary(x => x.h, x => x.v)).ToList();
     }
 }

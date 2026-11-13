@@ -1,0 +1,9 @@
+﻿-- The QueueFR v2 state that has no v1 column (market-fr ADR 0012, 0018, 0003).
+-- MySQL commits each DDL statement on its own, so the column is added only when missing.
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN StateV2 LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'StateV2');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;

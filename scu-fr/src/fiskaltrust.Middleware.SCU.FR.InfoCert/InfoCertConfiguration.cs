@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
@@ -56,14 +57,54 @@ public class InfoCertConfiguration
     /// <summary>Issuer claim: <c>debits</c> or <c>receipts</c> (SOC-REF-REGTVA, BT-8).</summary>
     public string? VatOption { get; set; }
 
-    /// <summary>Issuer claim: electronic address, <c>SIREN</c> or <c>SIREN_XXX</c> under scheme 0225 (BT-34).</summary>
+    /// <summary>
+    /// No longer used (market-fr#221): the seller's electronic address (BT-34) is eInvoicing data and is neither signed
+    /// nor reported. Still read so that a configuration carrying it starts; the SCU logs once that it is ignored.
+    /// </summary>
     public string? ElectronicAddress { get; set; }
+
+    // market-fr#221 (ADR 0021): the rest of the seller's identity the receipt header shows (R13 ENC-TIK-SOC-*,
+    // R12 SOC-*), printed by the issuer item and not signed. Optional; a value not configured has no line.
+
+    /// <summary>Issuer: company name (ENC-TIK-SOC-ETS, SOC-RSO).</summary>
+    public string? IssuerName { get; set; }
+
+    /// <summary>Issuer: what the name is, e.g. "Raison sociale" or "Enseigne" (ENC-TIK-SOC-ID).</summary>
+    public string? IssuerNameType { get; set; }
+
+    /// <summary>Issuer: street address (ENC-TIK-SOC-ADR, SOC-ADR).</summary>
+    public string? IssuerAddress { get; set; }
+
+    /// <summary>Issuer: postcode (ENC-TIK-SOC-CCP).</summary>
+    public string? IssuerPostalCode { get; set; }
+
+    /// <summary>Issuer: city (ENC-TIK-SOC-VIL).</summary>
+    public string? IssuerCity { get; set; }
+
+    /// <summary>Issuer: country (ENC-TIK-SOC-PAY).</summary>
+    public string? IssuerCountry { get; set; }
+
+    /// <summary>Issuer: intra-EU VAT number (ENC-TIK-SOC-TVA, SOC-TVA-NUM); not the VAT option.</summary>
+    public string? IssuerVatNumber { get; set; }
+
+    /// <summary>Issuer: share capital (SOC-CAPITAL), e.g. "500000 EUR".</summary>
+    public string? ShareCapital { get; set; }
+
+    /// <summary>The seller's identity the issuer item prints.</summary>
+    public FRIssuer Issuer() => new(Siret, IssuerName, IssuerNameType, IssuerAddress, IssuerPostalCode, IssuerCity, IssuerCountry,
+        IssuerVatNumber, Rcs, Naf, LegalForm, ShareCapital, VatOption);
+
+    /// <summary>
+    /// True in a sandbox (the Launcher's <c>sandbox</c> key). The NF525 mention then reads
+    /// "en cours de certif." instead of the attestation number (<see cref="FRSandbox"/>).
+    /// </summary>
+    [JsonIgnore]
+    public bool Sandbox { get; set; }
 
     public static InfoCertConfiguration FromConfiguration(Dictionary<string, object> configuration)
     {
-        var serialized = JsonSerializer.Serialize(configuration);
-        var result = JsonSerializer.Deserialize<InfoCertConfiguration>(serialized, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-            ?? new InfoCertConfiguration();
+        var result = FRScuConfiguration.Read<InfoCertConfiguration>(configuration);
+        result.Sandbox = FRSandbox.IsSet(configuration);
 
         if (string.IsNullOrWhiteSpace(result.Siret))
         {
@@ -75,11 +116,34 @@ public class InfoCertConfiguration
             throw new FRValidationException("The Infocert SCU requires a PrivateKey (base64 encoded secp256r1 key) in its configuration.");
         }
 
+        FRScuConfiguration.CheckSerialMatchesCertificate("Infocert", result.CertificateBase64, result.CertificateSerialNumber);
         FRIssuerClaims.ValidateVatOption("Infocert", result.VatOption);
 
         if (!string.IsNullOrEmpty(result.SoftwareCategory) && System.Array.IndexOf(InfoCertMention.Categories, result.SoftwareCategory) < 0)
         {
             throw new FRValidationException($"The Infocert SCU SoftwareCategory must be A, B or C (NF525 V2.3 §2.1), not '{result.SoftwareCategory}'.");
+        }
+
+        // Every justificatif carries the complete NF525 mention (NF525 V2.3 §6.1.6.1), so the SCU refuses to start
+        // without what the mention prints. The category and the version are known before certification and are always
+        // required; only a sandbox, not certified yet, may lack the attestation number: it prints "en cours de certif."
+        // in its place.
+        var missing = new List<string>();
+        if (string.IsNullOrWhiteSpace(result.SoftwareCategory))
+        {
+            missing.Add(nameof(SoftwareCategory));
+        }
+        if (!result.Sandbox && string.IsNullOrWhiteSpace(result.AttestationNumber))
+        {
+            missing.Add(nameof(AttestationNumber));
+        }
+        if (string.IsNullOrWhiteSpace(result.SoftwareVersion))
+        {
+            missing.Add(nameof(SoftwareVersion));
+        }
+        if (missing.Count > 0)
+        {
+            throw new FRValidationException($"The Infocert SCU requires {string.Join(", ", missing)} in its configuration{(result.Sandbox ? "" : " outside a sandbox")}: every justificatif prints the NF525 mention (NF525 V2.3 §6.1.6.1).");
         }
 
         return result;

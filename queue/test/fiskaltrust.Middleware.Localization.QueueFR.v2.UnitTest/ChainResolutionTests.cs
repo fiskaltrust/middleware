@@ -31,6 +31,7 @@ public class ChainResolutionTests
     [InlineData(ReceiptCase.Order0x3004, FRReceiptChain.Bill)]
     [InlineData(ReceiptCase.Pay0x3005, FRReceiptChain.PaymentProof)]
     [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010, FRReceiptChain.Duplicate)]
+    [InlineData((ReceiptCase) 0x3011, FRReceiptChain.Archive)]
     public void ResolveChain_MapsTheReceiptCaseToItsChain(ReceiptCase receiptCase, FRReceiptChain expected)
         => Request(receiptCase).ResolveChain().Should().Be(expected);
 
@@ -53,6 +54,7 @@ public class ChainResolutionTests
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.DailyClosing0x2011)]
+    [InlineData((ReceiptCase) 0x3011)]
     public void ResolveChain_TrainingNeverEntersAFiscalChain(ReceiptCase receiptCase)
     {
         var request = new ReceiptRequest { ftReceiptCase = receiptCase.WithCountry("FR").WithFlag(ReceiptCaseFlags.Training) };

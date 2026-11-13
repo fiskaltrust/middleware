@@ -28,6 +28,22 @@ public class FRTotals
     public decimal PIInternal { get; set; }
 
     public decimal PIUnknown { get; set; }
+
+    /// <summary>
+    /// The turnover per VAT rate, tax included (market-fr#221): the key is the rate rounded to the hundredth, written
+    /// culture-invariant without trailing zeros (<see cref="RateKey"/>: <c>20</c>, <c>5.5</c>, <c>2.1</c>, <c>0</c>), so 2.1 %
+    /// is no longer merged into <see cref="CIReducedS"/>. The same charge items as <see cref="Totalizer"/>. A queue migrated
+    /// from v1.2 starts with the v1 class totals under their rate (<see cref="UnknownRateKey"/> for the unknown class).
+    /// Empty when the totals were produced without it.
+    /// </summary>
+    public Dictionary<string, decimal> ByRate { get; set; } = new();
+
+    /// <summary>The key of the v1 unknown-VAT class in <see cref="ByRate"/>, which has no rate.</summary>
+    public const string UnknownRateKey = "UNKN";
+
+    /// <summary>A VAT rate as a <see cref="ByRate"/> key: rounded to the hundredth, no trailing zeros.</summary>
+    public static string RateKey(decimal rate)
+        => Math.Round(rate, 2, MidpointRounding.AwayFromZero).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 }
 
 /// <summary>
@@ -44,6 +60,9 @@ public enum FRTotalsPeriod
 
     /// <summary>The grand total since the queue was opened. Never reset.</summary>
     Perpetual,
+
+    /// <summary>The sales since the previous archive receipt, reset by the next one (v1.2 <c>A*</c>).</summary>
+    Archive,
 }
 
 /// <summary>
@@ -62,4 +81,25 @@ public class FRPeriodTotals
 
     /// <summary>The grand total since the queue was opened; reported on every closing.</summary>
     public FRTotals Perpetual { get; set; } = new();
+
+    /// <summary>
+    /// Every period the receipt closes, shortest first, its own (<see cref="Period"/>) last: a monthly closing
+    /// reports the day and the month, a yearly closing and the queue stop the day, the month and the year, as v1.2
+    /// (market-fr#221). Each is printed and signed. Empty when the receipt reports <see cref="Period"/> only (a
+    /// shift or daily closing as sent before, an archive receipt).
+    /// </summary>
+    public List<FRPeriodTotal> Closed { get; set; } = new();
+
+    /// <summary>The periods to print and sign, shortest first: <see cref="Closed"/>, else <see cref="Period"/> alone.</summary>
+    public IReadOnlyList<FRPeriodTotal> Reported()
+        => Closed.Count > 0 ? Closed : new[] { new FRPeriodTotal { Period = Period, Totals = Current } };
+}
+
+/// <summary>The totals of one closed period since its previous closing.</summary>
+/// <remarks>Temporary local declaration, see <see cref="IFRSSCD"/>.</remarks>
+public class FRPeriodTotal
+{
+    public FRTotalsPeriod Period { get; set; }
+
+    public FRTotals Totals { get; set; } = new();
 }

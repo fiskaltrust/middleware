@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.SCU.FR.LNE.Signing;
 /// from the archived receipt, so nothing here may be reordered or reformatted once certified.
 /// </summary>
 /// <remarks>
-/// The field list has to be confirmed against the LNE dossier before certification. Amounts are
+/// The 25-field list is frozen since 2026-11-10; any change is a decision of its own. Amounts are
 /// written with two decimals and an invariant decimal point, moments in round-trip UTC, so the
 /// string is stable across cultures and machines.
 /// </remarks>
@@ -27,6 +27,10 @@ internal static class LneDataSetBuilder
 
     public static string Build(ReceiptRequest request, ReceiptResponse response, LneConfiguration configuration, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null, int? copyNumber = null)
     {
+        // A separator inside a field would shift every later field of the signed data set.
+        FRIssuerClaims.RejectCharacter("LNE", nameof(response.ftCashBoxIdentification), response.ftCashBoxIdentification, FieldSeparator);
+        FRIssuerClaims.RejectCharacter("LNE", nameof(response.ftReceiptIdentification), response.ftReceiptIdentification, FieldSeparator);
+
         var chargeItems = request.cbChargeItems ?? new List<ChargeItem>();
         var payItems = request.cbPayItems ?? new List<PayItem>();
 
@@ -39,7 +43,10 @@ internal static class LneDataSetBuilder
             configuration.Naf ?? "",
             configuration.LegalForm ?? "",
             configuration.VatOption ?? "",
-            configuration.ElectronicAddress ?? "",
+            // market-fr#221: field 6 is reserved and always empty. It was the seller's electronic
+            // address (BT-34), which is eInvoicing data and stays out of the signed content; it is kept so
+            // nothing after it is renumbered.
+            "",
             response.ftQueueID.ToString(),
             response.ftQueueItemID.ToString(),
             // market-fr#225, ADR 0013: the hash of the request in its canonical form, as version:base64.
@@ -57,7 +64,12 @@ internal static class LneDataSetBuilder
             Amount(chargeItems.Sum(x => x.Amount)),
             VatBreakdown(chargeItems),
             PaymentBreakdown(payItems),
-            PeriodTotals(periodTotals),
+            // market-fr#221, archive-v2 §5: chosen by the receipt case (field 13): the archive boundaries on 0x3011,
+            // the migration event on 0x4022 (ADR 0003), the closed periods and their starts on the closings and the
+            // queue stop; empty elsewhere. Placed before the period totals so the fields read from the end keep their place.
+            FRSignedRecords.Field20(request, response),
+            // market-fr#221, archive-v2 §5: every period the receipt closes, shortest first, then the perpetual totals.
+            FRSignedRecords.Field21(periodTotals),
             configuration.CertificateSerialNumber,
             // ADR 0001: the chain counter, the start-of-chain flag and the previous entry's
             // signature, verbatim as its signature field stores it.
@@ -85,29 +97,6 @@ internal static class LneDataSetBuilder
             .GroupBy(x => x.ftPayItemCase.Case())
             .OrderBy(x => (long) x.Key)
             .Select(x => $"{(long) x.Key:X}:{Amount(x.Sum(item => item.Amount))}"));
-
-    /// <summary>
-    /// The accumulated totals of a grand-total (closing) receipt, as
-    /// <c>period,current-fields,perpetual-fields</c>. The field is always present - empty on the
-    /// receipts that are not closings - so the data set keeps a fixed shape.
-    /// </summary>
-    private static string PeriodTotals(FRPeriodTotals? periodTotals)
-        => periodTotals is null ? "" : string.Join(',', new[] { periodTotals.Period.ToString() }.Concat(Fields(periodTotals.Current)).Concat(Fields(periodTotals.Perpetual)));
-
-    private static IEnumerable<string> Fields(FRTotals totals) =>
-    [
-        Amount(totals.Totalizer),
-        Amount(totals.CINormal),
-        Amount(totals.CIReduced1),
-        Amount(totals.CIReduced2),
-        Amount(totals.CIReducedS),
-        Amount(totals.CIZero),
-        Amount(totals.CIUnknown),
-        Amount(totals.PICash),
-        Amount(totals.PINonCash),
-        Amount(totals.PIInternal),
-        Amount(totals.PIUnknown),
-    ];
 
     private static string Amount(decimal amount) => amount.ToString("0.00", CultureInfo.InvariantCulture);
 

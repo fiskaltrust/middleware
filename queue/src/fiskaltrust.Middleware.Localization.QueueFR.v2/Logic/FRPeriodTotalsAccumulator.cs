@@ -12,8 +12,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 /// <c>MonthRequest</c>, <c>YearRequest</c>, <c>StartRequest</c>, <c>StopRequest</c>), the shorter
 /// periods it ends too (<see cref="PeriodsClosedBy"/>, decided 2026-11-04): a monthly closing also
 /// closes the day, a yearly closing the day and the month, the initial-operation receipt the day,
-/// and the out-of-operation receipt the day, the month and the year. A shift and a daily closing
-/// close only themselves. The totals live in the v1
+/// the out-of-operation receipt the day, the month and the year, and the archive receipt the day and
+/// the archive period (v1.2 <c>ArchiveCommand</c>). A shift and a daily closing close only themselves. The totals live in the v1
 /// columns of ftQueueFR (market-fr ADR 0012), so a half-migrated queue carries them over as they are.
 /// </summary>
 public class FRPeriodTotalsAccumulator
@@ -51,7 +51,7 @@ public class FRPeriodTotalsAccumulator
                     AddTo(FRQueueFRColumns.TotalsPrefix(period), totals);
                 }
                 AddTo(chain == FRReceiptChain.Ticket ? FRQueueFRColumns.TicketTotalsPrefix : FRQueueFRColumns.InvoiceTotalsPrefix, totals);
-                AddTo(ArchiveTotalsPrefix, totals);
+                AddTo(FRQueueFRColumns.TotalsPrefix(FRTotalsPeriod.Archive), totals);
                 break;
             case FRReceiptChain.Bill:
                 AddTo(BillTotalsPrefix, FRTotalsCalculator.From(request));
@@ -72,14 +72,16 @@ public class FRPeriodTotalsAccumulator
 
     private const string BillTotalsPrefix = "B";
 
-    private const string ArchiveTotalsPrefix = "A";
-
-    /// <summary>The totals a closing of <paramref name="period"/> reports, plus the perpetual total.</summary>
-    public FRPeriodTotals Snapshot(FRTotalsPeriod period) => new()
+    /// <summary>
+    /// The totals a closing of <paramref name="period"/> reports, plus the perpetual total, and the totals of every period in
+    /// <paramref name="closed"/>, shortest first (market-fr#221: a closing prints and signs every period it closes, as v1.2).
+    /// </summary>
+    public FRPeriodTotals Snapshot(FRTotalsPeriod period, IEnumerable<FRTotalsPeriod>? closed = null) => new()
     {
         Period = period,
         Current = period == FRTotalsPeriod.Perpetual ? Perpetual() : _queueFR.GetTotals(FRQueueFRColumns.TotalsPrefix(period)),
         Perpetual = Perpetual(),
+        Closed = (closed ?? []).OrderBy(x => x).Select(x => new FRPeriodTotal { Period = x, Totals = _queueFR.GetTotals(FRQueueFRColumns.TotalsPrefix(x)) }).ToList(),
     };
 
     /// <summary>Closes a period. The perpetual total is never reset.</summary>
@@ -90,6 +92,20 @@ public class FRPeriodTotalsAccumulator
             _queueFR.SetTotals(FRQueueFRColumns.TotalsPrefix(period), new FRTotals());
         }
     }
+
+    /// <summary>
+    /// When <paramref name="period"/> was last closed (the 1.2 <c>GLast{Shift,Day,Month,Year}Moment</c>,
+    /// <c>ALastMoment</c>), so where its current totals start; null if it never was.
+    /// </summary>
+    public DateTime? LastClosed(FRTotalsPeriod period) => period switch
+    {
+        FRTotalsPeriod.Shift => _queueFR.GLastShiftMoment,
+        FRTotalsPeriod.Day => _queueFR.GLastDayMoment,
+        FRTotalsPeriod.Month => _queueFR.GLastMonthMoment,
+        FRTotalsPeriod.Year => _queueFR.GLastYearMoment,
+        FRTotalsPeriod.Archive => _queueFR.ALastMoment,
+        _ => null,
+    };
 
     /// <summary>
     /// Closes a period and records, in the 1.2 columns, which receipt closed it and when
@@ -104,6 +120,7 @@ public class FRPeriodTotalsAccumulator
             case FRTotalsPeriod.Day: _queueFR.GLastDayMoment = moment; _queueFR.GLastDayQueueItemId = queueItemId; break;
             case FRTotalsPeriod.Month: _queueFR.GLastMonthMoment = moment; _queueFR.GLastMonthQueueItemId = queueItemId; break;
             case FRTotalsPeriod.Year: _queueFR.GLastYearMoment = moment; _queueFR.GLastYearQueueItemId = queueItemId; break;
+            case FRTotalsPeriod.Archive: _queueFR.ALastMoment = moment; _queueFR.ALastQueueItemId = queueItemId; break;
         }
     }
 
@@ -126,6 +143,7 @@ public class FRPeriodTotalsAccumulator
             ReceiptCase.YearlyClosing0x2013 => [FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year],
             ReceiptCase.InitialOperationReceipt0x4001 => [FRTotalsPeriod.Day],
             ReceiptCase.OutOfOperationReceipt0x4002 => [FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year],
+            FRReceiptChainExt.ArchiveReceipt => [FRTotalsPeriod.Day, FRTotalsPeriod.Archive],
             _ => [],
         };
     }
@@ -139,7 +157,8 @@ public class FRPeriodTotalsAccumulator
 
     /// <summary>
     /// The period whose totals a closing receipt prints, training or not. As in v1.2, a training
-    /// closing prints the live figures of the real period without closing it (market-fr#221).
+    /// closing prints the live figures of the real period without closing it (market-fr#221). The queue stop
+    /// (0x4002) reports the year it closes, with the day and the month (<see cref="PeriodsReportedBy"/>).
     /// </summary>
     public static FRTotalsPeriod? ReportedPeriodOf(ReceiptRequest request) => request.ftReceiptCase.Case() switch
     {
@@ -147,7 +166,23 @@ public class FRPeriodTotalsAccumulator
         ReceiptCase.DailyClosing0x2011 => FRTotalsPeriod.Day,
         ReceiptCase.MonthlyClosing0x2012 => FRTotalsPeriod.Month,
         ReceiptCase.YearlyClosing0x2013 => FRTotalsPeriod.Year,
+        ReceiptCase.OutOfOperationReceipt0x4002 => FRTotalsPeriod.Year,
+        FRReceiptChainExt.ArchiveReceipt => FRTotalsPeriod.Archive,
         _ => null,
+    };
+
+    /// <summary>
+    /// The periods a closing (0x2010-0x2013) or the queue stop (0x4002) prints and signs, training or not: every period
+    /// it closes, its own last (<see cref="PeriodsClosedBy"/>; decided 2026-11-12, as v1.2). Empty for every other
+    /// receipt, an archive receipt included, which reports its archive period alone.
+    /// </summary>
+    public static IReadOnlyList<FRTotalsPeriod> PeriodsReportedBy(ReceiptRequest request) => request.ftReceiptCase.Case() switch
+    {
+        ReceiptCase.ShiftClosing0x2010 => [FRTotalsPeriod.Shift],
+        ReceiptCase.DailyClosing0x2011 => [FRTotalsPeriod.Day],
+        ReceiptCase.MonthlyClosing0x2012 => [FRTotalsPeriod.Day, FRTotalsPeriod.Month],
+        ReceiptCase.YearlyClosing0x2013 or ReceiptCase.OutOfOperationReceipt0x4002 => [FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year],
+        _ => [],
     };
 
     /// <summary>The ticket and invoice totals are never reset, so together they are the perpetual total.</summary>

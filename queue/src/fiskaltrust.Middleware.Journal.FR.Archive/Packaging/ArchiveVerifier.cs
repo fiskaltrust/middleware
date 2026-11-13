@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
     {
         internal ArchiveVerificationResult(string path) => Path = path;
 
-        /// <summary>"/" for the main archive, the sub-archive file name otherwise.</summary>
+        /// <summary>"/": the archive file itself (ADR 0019: one standalone file, no sub-archive).</summary>
         public string Path { get; }
 
         public ArchiveManifest? Manifest { get; internal set; }
@@ -28,37 +28,31 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
 
         public List<string> Errors { get; } = new List<string>();
 
-        public List<ArchiveVerificationResult> SubArchives { get; } = new List<ArchiveVerificationResult>();
+        public bool IsValid => Errors.Count == 0;
 
-        public bool IsValid => Errors.Count == 0 && SubArchives.All(s => s.IsValid);
-
-        public IEnumerable<string> AllErrors => Errors.Select(e => $"{Path}: {e}").Concat(SubArchives.SelectMany(s => s.AllErrors));
+        public IEnumerable<string> AllErrors => Errors.Select(e => $"{Path}: {e}");
     }
 
     /// <summary>
-    /// Checks an archive written by <see cref="ArchivePackager{TRecord}"/>: the manifest signature, every
-    /// file's hash and signature, that no file is unlisted, and the same for each sub-archive. A tampered or
-    /// malformed archive is reported in <see cref="ArchiveVerificationResult.Errors"/>, never thrown.
+    /// Checks an archive file written by <see cref="ArchivePackager{TRecord}"/> (ADR 0019): the manifest signature, every
+    /// file's hash and signature, that no file is unlisted, and the manifest's own coherence (a slice of at most a year,
+    /// its part among the request's files, its first and last record). A tampered or malformed archive is reported in
+    /// <see cref="ArchiveVerificationResult.Errors"/>, never thrown. The receipts, their chains and the certificate's
+    /// trust are TaxAuditorTool's checks (contract section 10.5).
     /// </summary>
     /// <remarks>
-    /// Files are hashed from their streams, and a sub-archive is read through a seekable copy that stays in
-    /// memory up to <see cref="DefaultInMemorySubArchiveLimit"/> and goes to a temporary file above it, so an
-    /// annual archive does not have to fit in memory. A crafted zip is refused, not followed: every size is
-    /// counted on the bytes actually decompressed and must match the declared one, a zip holds at most
-    /// <see cref="DefaultMaxEntries"/> entries, and archives nest one level only.
+    /// Files are hashed from their streams, so an annual archive does not have to fit in memory. A crafted zip is
+    /// refused, not followed: every size is counted on the bytes actually decompressed and must match the declared one,
+    /// and a zip holds at most <see cref="DefaultMaxEntries"/> entries.
     /// </remarks>
     public static class ArchiveVerifier
     {
-        /// <summary>The largest sub-archive verified in memory; a larger one is copied to a temporary file.</summary>
-        public const long DefaultInMemorySubArchiveLimit = 16 * 1024 * 1024;
-
 
         /// <summary>manifest.json, manifest.sig and the certificate are read whole; nothing legitimate comes near this.</summary>
         private const long SmallFileLimit = 1024 * 1024;
 
         /// <summary>
-        /// The most entries one zip may hold. A sub-archive holds about fifteen files and a main archive one
-        /// sub-archive per certificate and format version of the year, so this only stops a crafted zip.
+        /// The most entries one zip may hold. An archive file holds about twenty files, so this only stops a crafted zip.
         /// </summary>
         public const int DefaultMaxEntries = 4096;
 
@@ -69,15 +63,13 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
         public static ArchiveVerificationResult Verify(Stream archive)
         {
             if (archive is null) throw new ArgumentNullException(nameof(archive));
-            return Verify(archive, "/", ArchiveManifest.MainKind, VerifierLimits.Default);
+            return Verify(archive, VerifierLimits.Default);
         }
 
         /// <summary>With lowered limits, so tests reach them without huge archives.</summary>
-        internal static ArchiveVerificationResult Verify(Stream archive, VerifierLimits limits) => Verify(archive, "/", ArchiveManifest.MainKind, limits);
-
-        private static ArchiveVerificationResult Verify(Stream archive, string path, string expectedKind, VerifierLimits limits)
+        internal static ArchiveVerificationResult Verify(Stream archive, VerifierLimits limits)
         {
-            var result = new ArchiveVerificationResult(path);
+            var result = new ArchiveVerificationResult("/");
             ZipArchive zip;
             try
             {
@@ -131,10 +123,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                     return result;
                 }
                 result.Manifest = manifest;
-                if (!string.Equals(manifest.Kind, expectedKind, StringComparison.Ordinal))
-                {
-                    result.Errors.Add($"manifest kind is '{manifest.Kind}', expected '{expectedKind}'");
-                }
+                result.Errors.AddRange(CoherenceErrors(manifest));
 
                 if (!entries.TryGetValue(manifest.SigningCertificate.FileName, out var certificateEntry))
                 {
@@ -211,57 +200,6 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                     result.Errors.Add($"{unlisted} is not listed in the manifest");
                 }
 
-                var subArchives = manifest.SubArchives ?? new List<ManifestSubArchive>();
-                if (expectedKind != ArchiveManifest.MainKind && subArchives.Count > 0)
-                {
-                    // Archives nest one level (ADR 0005); following a sub-archive's own list would let a crafted
-                    // archive recurse without bound.
-                    result.Errors.Add("a sub-archive lists sub-archives of its own; archives nest one level only");
-                    subArchives = new List<ManifestSubArchive>();
-                }
-                foreach (var subArchive in subArchives)
-                {
-                    if (!manifest.Files.Any(f => f.Name == subArchive.FileName) || !entries.TryGetValue(subArchive.FileName, out var entry))
-                    {
-                        result.Errors.Add($"sub-archive {subArchive.FileName} is not a listed file");
-                        continue;
-                    }
-                    var (copy, uncopied) = SeekableCopy(entry, limits);
-                    if (copy is null)
-                    {
-                        result.Errors.Add(uncopied!);
-                        continue;
-                    }
-                    using var backing = copy;
-                    var sub = Verify(backing, subArchive.FileName, ArchiveManifest.SubKind, limits);
-                    if (sub.Manifest is not null
-                        && (sub.Manifest.CertificateSerialNumber != subArchive.CertificateSerialNumber || sub.Manifest.FormatVersion != subArchive.FormatVersion
-                            || sub.Manifest.PeriodStart != subArchive.PeriodStart || sub.Manifest.PeriodEnd != subArchive.PeriodEnd
-                            || sub.Manifest.Run != subArchive.Run || sub.Manifest.Schema != subArchive.Schema || sub.Manifest.Siret != manifest.Siret))
-                    {
-                        sub.Errors.Add("sub-archive manifest does not match its entry in the main manifest");
-                    }
-                    if (manifest.Files.First(f => f.Name == subArchive.FileName).Hash != subArchive.Hash)
-                    {
-                        sub.Errors.Add("sub-archive hash in the index does not match its listed file");
-                    }
-                    result.SubArchives.Add(sub);
-                }
-
-                // market-fr#262: the sub-archives partition the main period, in time order, without gaps or overlaps.
-                var cursor = manifest.PeriodStart;
-                foreach (var subArchive in subArchives.OrderBy(s => s.PeriodStart))
-                {
-                    if (subArchive.PeriodStart != cursor || subArchive.PeriodEnd <= subArchive.PeriodStart)
-                    {
-                        result.Errors.Add($"sub-archive {subArchive.FileName} period does not continue the previous one");
-                    }
-                    cursor = subArchive.PeriodEnd;
-                }
-                if (subArchives.Count > 0 && cursor != manifest.PeriodEnd)
-                {
-                    result.Errors.Add("the sub-archives do not cover the main period");
-                }
             }
             return result;
         }
@@ -297,15 +235,37 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                     }
                 }
             }
-            if (manifest.SubArchives is not null)
+        }
+
+        /// <summary>What the manifest says of the file itself (contract section 10.2, 10.5).</summary>
+        private static IEnumerable<string> CoherenceErrors(ArchiveManifest manifest)
+        {
+            if (manifest.PeriodStart is { } start && manifest.PeriodEnd is { } end)
             {
-                for (var i = 0; i < manifest.SubArchives.Count; i++)
+                if (end <= start)
                 {
-                    if (manifest.SubArchives[i] is null || string.IsNullOrEmpty(manifest.SubArchives[i].FileName))
-                    {
-                        yield return $"manifest sub-archive {i} has no fileName";
-                    }
+                    yield return "manifest periodEnd is not after periodStart";
                 }
+                else if (end > start.AddYears(1))
+                {
+                    yield return "manifest slice is longer than a year";
+                }
+            }
+            else if (manifest.PeriodStart is not null || manifest.PeriodEnd is not null)
+            {
+                yield return "manifest has only one of periodStart and periodEnd";
+            }
+            if (manifest.Part is { } part && (manifest.PartCount is not { } count || part < 1 || part > count))
+            {
+                yield return "manifest part is not within partCount";
+            }
+            if (manifest.RecordCount < 1 || manifest.FirstRecord is null || manifest.LastRecord is null)
+            {
+                yield return "manifest names no first and last record; an archive file holds at least one";
+            }
+            if (string.IsNullOrEmpty(manifest.ClosedBy))
+            {
+                yield return "manifest has no closedBy";
             }
         }
 
@@ -348,43 +308,6 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
         }
 
         /// <summary>
-        /// A sub-archive copied to a seekable stream: in memory until the bytes actually copied pass
-        /// <see cref="VerifierLimits.InMemorySubArchiveBytes"/>, then in a temporary file. The zip's declared size decides
-        /// nothing, since a crafted zip can lie about it.
-        /// </summary>
-        private static (Stream? Copy, string? Problem) SeekableCopy(ZipArchiveEntry entry, VerifierLimits limits)
-        {
-            Stream backing = new MemoryStream();
-            try
-            {
-                var problem = Decompress(entry, limits.MaxEntryBytes, (bytes, count) =>
-                {
-                    if (backing is MemoryStream memory && memory.Length + count > limits.InMemorySubArchiveBytes)
-                    {
-                        var file = new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 81920, FileOptions.DeleteOnClose);
-                        memory.Position = 0;
-                        memory.CopyTo(file);
-                        memory.Dispose();
-                        backing = file;
-                    }
-                    backing.Write(bytes, 0, count);
-                }, out _);
-                if (problem is not null)
-                {
-                    backing.Dispose();
-                    return (null, problem);
-                }
-                backing.Position = 0;
-                return (backing, null);
-            }
-            catch
-            {
-                backing.Dispose();
-                throw;
-            }
-        }
-
-        /// <summary>
         /// Streams an entry's decompressed bytes into <paramref name="sink"/>, counting what is actually read.
         /// Returns why the entry is unusable: it decompresses past <paramref name="limit"/>, its data is corrupt,
         /// or it holds another size than the zip declares (forged metadata). Null when it is fine.
@@ -421,8 +344,6 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
             public int MaxEntries { get; set; } = DefaultMaxEntries;
 
             public long MaxEntryBytes { get; set; } = DefaultMaxEntryBytes;
-
-            public long InMemorySubArchiveBytes { get; set; } = DefaultInMemorySubArchiveLimit;
         }
 
         private static byte[]? FromBase64(string value)

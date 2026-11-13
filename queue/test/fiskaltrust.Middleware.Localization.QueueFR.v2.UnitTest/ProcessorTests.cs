@@ -106,6 +106,64 @@ public class ProcessorTests
         response.receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
     }
 
+    /// <summary>As v1.2, a training 0x0005, 0x3000 or 0x3003 is signed on chain X with the training mention.</summary>
+    [Theory]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.ProtocolUnspecified0x3000)]
+    [InlineData(ReceiptCase.InternalUsageMaterialConsumption0x3003)]
+    public async Task UnsignedDocuments_InTraining_AreSignedOnX(ReceiptCase receiptCase)
+    {
+        var (pipeline, sscd) = CreatePipeline();
+        var request = CommandRequest(receiptCase);
+        request.ReceiptRequest.ftReceiptCase = request.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+
+        var response = await UnsignedDocumentAsync(pipeline, receiptCase, request);
+
+        sscd.Calls.Should().ContainSingle();
+        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#X1");
+        response.receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+    }
+
+    /// <summary>As v1.2 (contract §1.4), an unsigned response carries LateSigningModeIsActive 0x0008 while the range is open.</summary>
+    [Theory]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.ProtocolUnspecified0x3000)]
+    [InlineData(ReceiptCase.InternalUsageMaterialConsumption0x3003)]
+    public async Task UnsignedDocuments_CarryTheLateSigningFlag_WhileTheRangeIsOpen(ReceiptCase receiptCase)
+    {
+        var state = new StoredChainState(new ftQueueFR { ftQueueFRId = Guid.NewGuid(), UsedFailedCount = 2, UsedFailedQueueItemId = Guid.NewGuid() });
+        var sscd = new FakeFRSSCD();
+        var pipeline = new FRSigningPipeline(sscd, state.Provider());
+
+        var open = await UnsignedDocumentAsync(pipeline, receiptCase, CommandRequest(receiptCase));
+        var closed = await UnsignedDocumentAsync(CreatePipeline().pipeline, receiptCase, CommandRequest(receiptCase));
+
+        open.receiptResponse.ftState.IsFlag(StateFlags.LateSigningModeIsActive).Should().BeTrue();
+        closed.receiptResponse.ftState.IsFlag(StateFlags.LateSigningModeIsActive).Should().BeFalse();
+        sscd.Calls.Should().BeEmpty();
+        (await state.ReadAsync()).UsedFailedCount.Should().Be(2, "an unsigned receipt neither opens nor extends the range");
+    }
+
+    [Fact]
+    public async Task AFailedSignature_CarriesTheLateSigningFlag_WhileTheRangeIsOpen()
+    {
+        var state = new StoredChainState(new ftQueueFR { ftQueueFRId = Guid.NewGuid(), UsedFailedCount = 1, UsedFailedQueueItemId = Guid.NewGuid() });
+        var sscd = new FakeFRSSCD { FailWith = "unreachable" };
+        var pipeline = new FRSigningPipeline(sscd, state.Provider());
+
+        var response = await pipeline.SignAsync(CommandRequest(ReceiptCase.PointOfSaleReceipt0x0001));
+
+        response.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        response.receiptResponse.ftState.IsFlag(StateFlags.LateSigningModeIsActive).Should().BeTrue();
+    }
+
+    private static async Task<ProcessCommandResponse> UnsignedDocumentAsync(FRSigningPipeline pipeline, ReceiptCase receiptCase, ProcessCommandRequest request) => receiptCase switch
+    {
+        ReceiptCase.DeliveryNote0x0005 => await new ReceiptCommandProcessorFR(pipeline).DeliveryNote0x0005Async(request),
+        ReceiptCase.ProtocolUnspecified0x3000 => await ProtocolProcessor(pipeline).ProtocolUnspecified0x3000Async(request),
+        _ => await ProtocolProcessor(pipeline).InternalUsageMaterialConsumption0x3003Async(request),
+    };
+
     /// <summary>v1.2 prints "justificatif non valable pour encaissement" on every payment proof (v0 0x02).</summary>
     [Theory]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
@@ -225,10 +283,14 @@ public class ProcessorTests
         sscd.Calls.Should().ContainSingle();
     }
 
+    /// <summary>
+    /// As v1.2, a training 0x4001 (Queue-start receipt) or 0x4002 (Queue-stop receipt) is signed on chain X and
+    /// leaves the queue alone: no activation or deactivation, no lifecycle journal, no start or stop mention.
+    /// </summary>
     [Theory]
     [InlineData(ReceiptCase.InitialOperationReceipt0x4001)]
     [InlineData(ReceiptCase.OutOfOperationReceipt0x4002)]
-    public async Task TrainingLifecycleReceipt_IsRefusedBeforeSigning_AndLeavesTheQueueAlone(ReceiptCase receiptCase)
+    public async Task TrainingLifecycleReceipt_IsSignedOnX_AndLeavesTheQueueAlone(ReceiptCase receiptCase)
     {
         var (pipeline, sscd) = CreatePipeline();
         var storage = new Mock<ILocalizedQueueStorageProvider>();
@@ -240,9 +302,10 @@ public class ProcessorTests
             ? await sut.InitialOperationReceipt0x4001Async(request)
             : await sut.OutOfOperationReceipt0x4002Async(request);
 
-        response.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        response.receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#X1");
+        sscd.Calls.Should().ContainSingle();
         response.actionJournals.Should().BeEmpty("no activation or deactivation is journaled");
-        sscd.Calls.Should().BeEmpty("nothing is signed into the training chain");
         storage.Verify(x => x.ActivateQueueAsync(), Times.Never);
         storage.Verify(x => x.DeactivateQueueAsync(), Times.Never);
     }
@@ -274,6 +337,20 @@ public class ProcessorTests
         response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#E1");
         response.actionJournals.Should().ContainSingle();
         storage.Verify(x => x.ActivateQueueAsync(), Times.Once);
+    }
+
+    /// <summary>ADR 0021: 0x4001 hands the SCU the processing version stored with the queue item; the InfoCert SCU signs it (R19 260).</summary>
+    [Fact]
+    public async Task InitialOperation_HandsOverTheProcessingVersion()
+    {
+        var (pipeline, sscd) = CreatePipeline();
+        var sut = new LifecycleCommandProcessorFR(sscd, pipeline, new Mock<ILocalizedQueueStorageProvider>().Object);
+
+        var response = await sut.InitialOperationReceipt0x4001Async(CommandRequest(ReceiptCase.InitialOperationReceipt0x4001));
+
+        var stored = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(System.Text.Json.JsonSerializer.Serialize(response.receiptResponse))!;
+        LifecycleCommandProcessorFR.ProcessingVersion.Should().NotBeNullOrEmpty();
+        SCU.FR.Abstraction.Helpers.FRStateData.Text(stored, SCU.FR.Abstraction.Helpers.FRStateData.VersionProperty).Should().Be(LifecycleCommandProcessorFR.ProcessingVersion);
     }
 
     [Fact]
@@ -387,6 +464,35 @@ public class ProcessorTests
         var result = await sut.ValidateAsync(request, new ftQueue());
 
         result.Errors.Should().NotContain(x => x.ErrorCode == "CurrencyMustMatchMarket");
+    }
+
+    /// <summary>
+    /// The shared business cases DrawerMoneyManagement_1/_2 as sent: a not-taxable cash transfer
+    /// charge item and its cash pay item, with no previous receipt (market-fr ADR 0016). France
+    /// accepts both directions: the shared NegativeAmounts rule accepts money leaving the drawer
+    /// (interface 1.3.79-rc1 branch, shared fix M4).
+    /// </summary>
+    [Theory]
+    [InlineData(500.0, 0x0001L, new string[0])]
+    [InlineData(-500.0, 0x0001L, new string[0])]
+    [InlineData(-100.0, 0x000CL, new string[0])] // Withdrawal_1
+    public async Task ReceiptValidatorFR_TakesTheReferenceTablesDrawerMove(double amount, long payItemCase, string[] expectedErrors)
+    {
+        var repository = new Mock<IMiddlewareQueueItemRepository>();
+        var sut = new ReceiptValidatorFR(new ReceiptReferenceProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object))));
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PaymentTransfer0x0002.WithCountry("FR"),
+            cbReceiptReference = "drawer-1",
+            cbReceiptMoment = DateTime.UtcNow,
+            Currency = Currency.EUR,
+            cbChargeItems = [new ChargeItem { Amount = (decimal) amount, Quantity = 1m, VATRate = 0m, Description = "move money", Currency = Currency.EUR, ftChargeItemCase = ((ChargeItemCase) 0x00A8).WithCountry("FR") }],
+            cbPayItems = [new PayItem { Amount = (decimal) amount, Description = "Cash", Currency = Currency.EUR, ftPayItemCase = ((PayItemCase) payItemCase).WithCountry("FR") }],
+        };
+
+        var result = await sut.ValidateAsync(request, new ftQueue { CountryCode = "FR" });
+
+        result.Errors.Select(x => x.ErrorCode).Should().BeEquivalentTo(expectedErrors);
     }
 
     /// <summary>
